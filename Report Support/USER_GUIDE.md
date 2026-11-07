@@ -39,6 +39,11 @@ and click **Save Changes**; click **Delete** beside a row to remove it;
 with nothing clicked, the blank form adds a new one (**New** clears the
 form again).
 
+- **Hover for help.** Rest the mouse on any button, box, drop-down or
+  grid square for half a second and a yellow hint explains what it does
+  and what to type (e.g. "A number from 1 to 500, e.g. 60").
+- **Units are always shown:** money in RM, times as 24-hour HH:00,
+  durations in hours, commission in %, class sizes in people.
 - **Mistakes never crash the program.** A message tells you what to fix,
   e.g. "Please enter a valid number for Hourly rate."
 - **Dates:** type `YYYY-MM-DD`, or click 📅 for a calendar pop-up.
@@ -51,7 +56,7 @@ form again).
 
 | Action | What you do |
 |---|---|
-| **Book a Court** | Pick a date and a sport. The grid shows every court (rows) and every hour (columns): green = free, red ✕ = booked, grey = past. Click a free hour; click the next hour on the same court to book longer (click a selected hour again to clear). Pick the member and click **Book**. The bar shows the court, time and price. |
+| **Book a Court** | Pick a date and a sport. The grid shows every court (rows) and every 1-hour slot by its start time, 08:00 to 21:00 (columns): green = free, red ✕ = booked, grey = past. Click a free hour; click the next hour on the same court to book longer (click a selected hour again to clear). Pick the member and click **Book**. The bar shows the court, time and price. |
 | **Cancel a Booking** | Click the booking (search by Member ID if needed), then **Cancel Booking**. It stays on record as CANCELLED. |
 | **Delete a Booking** | Only cancelled bookings are listed. Click one, then **Delete Booking**. |
 

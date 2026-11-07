@@ -134,6 +134,16 @@ workflow rules. "Actual" is what really happened, not a guess.
 | MC-11 | Delete beside a member | Ahmad Faiz (upcoming booking) / a new member with nothing outstanding | Blocked / deleted | Both correct | PASS |
 | MC-12 | Summary under the member list | open Manage Members | Total, members per type, expiring in 30 days | "5 members (Annual 2, Monthly 1, Pay-As-You-Go 1, VIP 1). 2 expiring in the next 30 days." | PASS |
 
+## Hover hints and units (Entry 20)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| TIP-01 | Every interactive widget has a hover hint | every button, entry, drop-down and radio button on Home, every menu and every action page (rows clicked too) | none without a hint | 306 checked, none missing | PASS |
+| TIP-02 | Hint timing and text | rest on a past and a free grid square | nothing at 0.2 s; at 0.7 s "Court 1, 08:00-09:00: this time has already passed." / "...: free, RM 20.00 for this hour. Click to select it ..." | Exactly so | PASS |
+| TIP-03 | Hint closes | move the mouse away; click a button | hint closes both times | Closed | PASS |
+| UNIT-01 | Booking grid columns show hours | open Book a Court | column labels 08:00, 09:00, ... 21:00 under "Start time"; info line says "free 1-hour slots" | Exactly so | PASS |
+| UNIT-02 | Units in lists and forms | coach list, class list, bill list, coach and class forms | RM/hour, Comm %, People, Total RM, Hourly rate (RM/hour), Commission (%), Max people (1-30), Fee per person (RM), durations in hours | All shown | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

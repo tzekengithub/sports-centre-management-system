@@ -415,12 +415,13 @@ def build_manage_members_page(page_frame, page_hooks):
     def build_form(form_frame):
         """Add the name, phone and type fields, plus a line for the dates."""
         fields["name"] = common.make_entry(form_frame, width=22)
-        common.add_form_row(form_frame, 0, "Name", fields["name"])
+        common.add_form_row(form_frame, 0, "Name", fields["name"], tip="The person's full name. Letters, spaces, / and ' only (e.g. Ravi a/l Kumar).")
         fields["phone"] = common.make_entry(form_frame, width=22)
-        common.add_form_row(form_frame, 1, "Phone", fields["phone"])
+        common.add_form_row(form_frame, 1, "Phone", fields["phone"], tip="Malaysian mobile number: 10-11 digits starting with 01, no spaces or dashes.")
         fields["type"] = tk.StringVar(value=common.MEMBERSHIP_TYPES[0])
         common.add_form_row(form_frame, 2, "Type", common.make_option_menu(
-            form_frame, fields["type"], list(common.MEMBERSHIP_TYPES), width=18))
+            form_frame, fields["type"], list(common.MEMBERSHIP_TYPES), width=18),
+            tip="The membership type. Changing it changes their discount; use Renew to extend the dates.")
         fields["dates"] = tk.Label(form_frame, text="", font=common.SMALL_FONT, bg=common.PANEL_BG,
                                    fg=common.MUTED_TEXT_COLOR, justify="left")
         fields["dates"].grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
@@ -463,10 +464,11 @@ def build_register_page(section_frame, page_hooks):
     details_row = tk.Frame(section_frame, bg=common.APP_BG)
     details_row.pack(side="top", fill="x")
     tk.Label(details_row, text="Name", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left")
-    name_entry = common.make_entry(details_row, width=28)
+    name_entry = common.make_entry(details_row, width=28, tip="The person's full name. Letters, spaces, / and ' only (e.g. Ravi a/l Kumar).")
     name_entry.pack(side="left", padx=(6, 20))
     tk.Label(details_row, text="Phone", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left")
-    phone_entry = common.make_entry(details_row, width=16)
+    phone_entry = common.make_entry(details_row, width=16,
+                                    tip="Malaysian mobile number: 10-11 digits starting with 01, no spaces or dashes. Each phone can only be registered once.")
     phone_entry.pack(side="left", padx=6)
 
     tk.Label(section_frame, text="Choose a membership type", font=common.HEADING_FONT, bg=common.APP_BG,
@@ -526,6 +528,10 @@ def build_register_page(section_frame, page_hooks):
                                 relief="solid", bd=1, cursor="hand2",
                                 command=make_type_command(membership_type))
         type_button.grid(row=type_index // 4, column=type_index % 4, padx=4, pady=4)
+        common.add_tooltip(type_button, (
+            f"Choose {membership_type}: RM {common.MEMBERSHIP_FEES[membership_type]:.2f} fee, lasts "
+            f"{duration_text(MEMBERSHIP_DURATION_DAYS[membership_type])}, "
+            f"{common.MEMBER_DISCOUNT_PCT[membership_type]:g}% off court bookings and classes."))
         type_buttons[membership_type] = type_button
 
     def reset_form():
@@ -551,7 +557,9 @@ def build_register_page(section_frame, page_hooks):
         messagebox.showinfo("Registered", message)
         reset_form()
 
-    register_button = common.make_button(bottom_row, "Register", on_register)
+    register_button = common.make_button(bottom_row, "Register", on_register,
+                                         tip="Create the member with the name, phone and card chosen above. "
+                                             "Click a card first.")
     register_button.pack(side="right")
 
     page_hooks["Register"] = reset_form

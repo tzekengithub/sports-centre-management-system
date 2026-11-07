@@ -62,6 +62,14 @@ that read/write the data files and `raise ValueError` on bad input) and a
   and "inf", so these are rejected explicitly (nan is the only value not
   equal to itself), and the value is capped to `[minimum, maximum]`.
   `is_finite_number(value)` is the same nan/inf check on its own.
+- `add_tooltip(widget, tip_text)` - hover hint: on `<Enter>` it waits
+  450 ms (`widget.after`), then opens a small borderless `Toplevel`
+  (`wm_overrideredirect`) under the widget; `<Leave>` or a click closes
+  it. `make_button`, `make_entry`, `make_option_menu` and `add_form_row`
+  take a `tip=` argument, and the menu, pick and manage pages add hints
+  to their own buttons, rows and search boxes, so every interactive
+  widget has one. The booking grid gives each square its own hint
+  (`cell_tip_text`: free with price / booked / selected / past).
 - GUI building blocks used by every tab: `build_action_menu` and
   `build_pick_page` (see above), `make_button` (green, red "danger" or
   white "light" style), `make_card`, `make_entry`, `add_form_row`,

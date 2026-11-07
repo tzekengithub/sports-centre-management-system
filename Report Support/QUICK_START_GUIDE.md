@@ -19,6 +19,9 @@ Needs Python 3.10+. No installs needed.
 row to edit it, **Delete** sits beside each row, and a blank form adds
 a new one.
 
+**Not sure what something does? Rest the mouse on it** - a yellow hint
+explains every button, box and grid square.
+
 Dates: type `YYYY-MM-DD` or click 📅. Red buttons are permanent and
 always ask first.
 

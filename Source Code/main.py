@@ -53,6 +53,15 @@ TAB_LABELS = {
 
 TAB_BAR_HEIGHT = 50
 
+# Hover hints for the tab bar.
+TAB_TIPS = {
+    "home": "Start page: open a module or read How to Use This System.",
+    "booking": "See which courts are free each hour and book them; cancel or delete bookings.",
+    "membership": "Register new members, update or delete them, renew memberships.",
+    "coaching": "Coaches, classes, enrolment, and each coach's hours and commission.",
+    "billing": "Create bills, take payments, view receipts and daily revenue.",
+}
+
 # Colours for the selected tab (looks "pressed in", same colour as the
 # page below it) and for the other tabs (normal green buttons).
 ACTIVE_TAB_BG = common.APP_BG
@@ -71,6 +80,8 @@ WELCOME_MESSAGE = (
     "Each tab asks what you would like to do. Click an action and it "
     "opens on its own page, with one line telling you what to do. "
     "Click Back (or the tab again) to choose another action.\n\n"
+    "Not sure what something does? Rest the mouse on any button, box "
+    "or grid square for a moment and a yellow hint explains it.\n\n"
     "Sample data is already loaded (members MEM001-MEM004 and so on), "
     "so you can try things straight away."
 )
@@ -92,9 +103,12 @@ def build_home_tab(parent, switch_to_tab):
              bg=common.APP_BG, fg=common.ACCENT_COLOR).pack(pady=(40, 10))
     tk.Label(home_frame, text="Select a module below, or use the tabs along the top",
              font=common.LABEL_FONT, bg=common.APP_BG).pack(pady=(0, 10))
-    tk.Button(home_frame, text="How to Use This System", width=30, font=common.BUTTON_FONT,
-              bg=common.ACCENT_COLOR, fg=common.BUTTON_TEXT_COLOR,
-              command=show_welcome_message).pack(pady=(0, 15))
+    help_button = tk.Button(home_frame, text="How to Use This System", width=30, font=common.BUTTON_FONT,
+                            bg=common.ACCENT_COLOR, fg=common.BUTTON_TEXT_COLOR,
+                            command=show_welcome_message)
+    help_button.pack(pady=(0, 15))
+    common.add_tooltip(help_button, "A short guide to the whole program. Tip: rest the mouse on any "
+                                    "button or box to see what it does.")
 
     menu_frame = tk.Frame(home_frame, bg=common.APP_BG)
     menu_frame.pack(pady=10)
@@ -114,9 +128,11 @@ def build_home_tab(parent, switch_to_tab):
     ]
 
     for item_label, tab_name in menu_items:
-        tk.Button(menu_frame, text=item_label, width=30, font=common.BUTTON_FONT,
-                  bg=common.BUTTON_COLOR, fg=common.BUTTON_TEXT_COLOR,
-                  command=make_menu_command(tab_name)).pack(pady=6)
+        menu_button = tk.Button(menu_frame, text=item_label, width=30, font=common.BUTTON_FONT,
+                                bg=common.BUTTON_COLOR, fg=common.BUTTON_TEXT_COLOR,
+                                command=make_menu_command(tab_name))
+        menu_button.pack(pady=6)
+        common.add_tooltip(menu_button, TAB_TIPS[tab_name])
 
     return home_frame
 
@@ -196,11 +212,13 @@ def main():
                                activeforeground=ACTIVE_TAB_FG,
                                command=make_tab_command(tab_name))
         tab_button.pack(side="left")
+        common.add_tooltip(tab_button, TAB_TIPS[tab_name])
         tab_buttons[tab_name] = tab_button
 
     tk.Button(tab_bar, text="Exit", width=10, font=common.BUTTON_FONT, bd=0, pady=12,
               bg=common.DANGER_COLOR, fg=common.BUTTON_TEXT_COLOR,
               command=root_window.destroy).pack(side="right")
+    common.add_tooltip(tab_bar.winfo_children()[-1], "Close the program. Everything is already saved.")
 
     switch_to_tab("home")
 

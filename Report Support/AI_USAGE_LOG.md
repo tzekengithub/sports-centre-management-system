@@ -460,6 +460,29 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   time because the screen was off (they came out black), so check the
   two new pages by eye once. Data restored afterward.
 
+## Entry 20 - Hour labels, units everywhere, hover hints on everything
+- **Asked:** The booking grid's column labels had no units (just
+  "08", "09"); make every number show its unit and be easy to see;
+  and give every control a hover hint explaining how to use it.
+- **Produced:**
+  - Booking grid columns now read 08:00 ... 21:00 under a "Start
+    time" label; the info line says "free 1-hour slots"; the selection
+    says "(2 hour(s))"; booking details show the duration in hours.
+  - Units added to list headers and form labels: RM/hour and Comm %
+    (coaches), People (classes), Court (bookings), Total RM (bills),
+    Hourly rate (RM/hour), Commission (%), Max people (1-30), "of N
+    people" and "(N hour(s))" in class details.
+  - `common.add_tooltip`: a yellow hint after 450 ms, closed on leave
+    or click. The shared builders take `tip=`, so every button, entry,
+    drop-down, radio button, menu action, list row, Delete button,
+    tab and grid square has one. Grid squares explain their own state
+    and price. The welcome message tells users to hover.
+- **Verify:** An audit of all 306 interactive widgets across every
+  page found none without a hint; the hint logic was tested by firing
+  its Enter/Leave/click handlers (the screen was off, so real mouse
+  events and screenshots weren't possible); 82-click blank-input run
+  with no exception. Please hover over a few things once by eye.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

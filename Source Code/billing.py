@@ -515,7 +515,18 @@ BILLING_ACTIONS = [
 CATEGORY_CHOICES = (("COURT", "Court Rental"), ("COACHING", "Coaching Class"),
                     ("MEMBERSHIP", "Membership Fee"), ("RETAIL", "Retail Sale"))
 REVENUE_BAR_WIDTH = 260
-BILL_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Member':<8}{'For':<16}{'Total':>9}"
+CATEGORY_TIPS = {
+    "COURT": "Bill one of the member's court bookings (sport rate x hours).",
+    "COACHING": "Bill a coaching class the member is enrolled in (the class fee per person).",
+    "MEMBERSHIP": "Bill the yearly or monthly fee for the member's membership type.",
+    "RETAIL": "Bill something sold at the counter: type the item and its price.",
+}
+METHOD_TIPS = {
+    "Cash": "Paid in cash. Type how much they handed over; the change is worked out.",
+    "Card": "Paid by card. Always the exact total.",
+    "E-Wallet": "Paid by e-wallet. Always the exact total.",
+}
+BILL_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Member':<8}{'For':<16}{'Total RM':>9}"
 
 
 def show_problem(error):
@@ -640,12 +651,17 @@ def build_pay_page(page_frame):
         form_widgets["method"] = tk.StringVar(value="Cash")
         method_row = tk.Frame(form_frame, bg=common.PANEL_BG)
         for method_name in ("Cash", "Card", "E-Wallet"):
-            tk.Radiobutton(method_row, text=method_name, value=method_name, variable=form_widgets["method"],
-                           command=lock_amount_unless_cash, font=common.LABEL_FONT, bg=common.PANEL_BG,
-                           activebackground=common.PANEL_BG).pack(side="left")
-        common.add_form_row(form_frame, 0, "Paid by", method_row)
+            method_button = tk.Radiobutton(method_row, text=method_name, value=method_name,
+                                           variable=form_widgets["method"], command=lock_amount_unless_cash,
+                                           font=common.LABEL_FONT, bg=common.PANEL_BG,
+                                           activebackground=common.PANEL_BG)
+            method_button.pack(side="left")
+            common.add_tooltip(method_button, METHOD_TIPS[method_name])
+        common.add_form_row(form_frame, 0, "Paid by", method_row, tip="How the member is paying.")
         form_widgets["amount"] = common.make_entry(form_frame, width=10)
-        common.add_form_row(form_frame, 1, "Amount received (RM)", form_widgets["amount"])
+        common.add_form_row(form_frame, 1, "Amount received (RM)", form_widgets["amount"],
+                            tip="Ringgit handed over. Must be at least the total; any extra is given back "
+                                "as change.")
 
     def fill_form(bill_id):
         """Start with cash and the exact total."""
@@ -693,21 +709,25 @@ def build_create_bill_page(section_frame, page_hooks):
     reference_variable = tk.StringVar(value="")
 
     member_menu = common.make_option_menu(card, member_variable, [], width=30)
-    common.add_form_row(card, 0, "Member", member_menu)
+    common.add_form_row(card, 0, "Member", member_menu,
+                        tip="Who the bill is for. Their membership type sets the discount.")
 
     category_row = tk.Frame(card, bg=common.PANEL_BG)
-    common.add_form_row(card, 1, "Bill for", category_row)
+    common.add_form_row(card, 1, "Bill for", category_row, tip="Choose what the member is paying for.")
 
     # Row 2 changes with the category: a drop-down of bookings/classes,
     # a plain note for a membership fee, or item + price for retail.
     detail_label = tk.Label(card, text="", font=common.LABEL_FONT, bg=common.PANEL_BG, anchor="w")
     detail_label.grid(row=2, column=0, sticky="w", padx=(0, 10), pady=4)
-    reference_menu = common.make_option_menu(card, reference_variable, [], width=30)
+    reference_menu = common.make_option_menu(card, reference_variable, [], width=30,
+                                             tip="Pick the booking or class to bill. Only ones not billed yet "
+                                                 "are listed.")
     retail_row = tk.Frame(card, bg=common.PANEL_BG)
-    item_entry = common.make_entry(retail_row, width=18)
+    item_entry = common.make_entry(retail_row, width=18, tip="What was sold, e.g. Water Bottle.")
     item_entry.pack(side="left")
     tk.Label(retail_row, text="  Price RM", font=common.LABEL_FONT, bg=common.PANEL_BG).pack(side="left")
-    price_entry = common.make_entry(retail_row, width=8)
+    price_entry = common.make_entry(retail_row, width=8,
+                                    tip="The price in Ringgit before the member discount, e.g. 5.50.")
     price_entry.pack(side="left", padx=(4, 0))
     note_label = tk.Label(card, text="", font=common.LABEL_FONT, bg=common.PANEL_BG, anchor="w")
 
@@ -818,9 +838,12 @@ def build_create_bill_page(section_frame, page_hooks):
     price_entry.bind("<KeyRelease>", on_price_typed)
 
     for category_code, category_label in CATEGORY_CHOICES:
-        tk.Radiobutton(category_row, text=category_label, value=category_code, variable=category_variable,
-                       command=show_detail_row, font=common.LABEL_FONT, bg=common.PANEL_BG,
-                       activebackground=common.PANEL_BG).pack(side="left", padx=(0, 6))
+        category_button = tk.Radiobutton(category_row, text=category_label, value=category_code,
+                                         variable=category_variable, command=show_detail_row,
+                                         font=common.LABEL_FONT, bg=common.PANEL_BG,
+                                         activebackground=common.PANEL_BG)
+        category_button.pack(side="left", padx=(0, 6))
+        common.add_tooltip(category_button, CATEGORY_TIPS[category_code])
 
     def on_create():
         """Create the bill shown in the preview."""
@@ -844,7 +867,9 @@ def build_create_bill_page(section_frame, page_hooks):
         price_entry.delete(0, tk.END)
         show_detail_row()
 
-    create_button = common.make_button(card, "Create Bill", on_create)
+    create_button = common.make_button(card, "Create Bill", on_create,
+                                       tip="Create the bill shown in the preview. It starts UNPAID; take "
+                                           "payment with Pay Bill.")
     create_button.grid(row=4, column=0, columnspan=2, sticky="w")
 
     def on_show():
@@ -869,7 +894,9 @@ def build_revenue_page(section_frame, page_hooks):
     date_row = tk.Frame(section_frame, bg=common.APP_BG)
     date_row.pack(side="top", fill="x")
     tk.Label(date_row, text="Date", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left")
-    date_entry = common.make_entry(date_row, width=12)
+    date_entry = common.make_entry(date_row, width=12,
+                                   tip="The day to add up, as YYYY-MM-DD. The table updates as soon as "
+                                       "the date is complete.")
     date_entry.pack(side="left", padx=(6, 4))
     date_entry.insert(0, common.today_string())
 
@@ -934,7 +961,9 @@ def build_revenue_page(section_frame, page_hooks):
             refresh_revenue()
 
     date_entry.bind("<KeyRelease>", on_date_typed)
-    common.make_button(date_row, "\U0001F4C5", on_pick_date, style="light").pack(side="left")
-    common.make_button(date_row, "Show", refresh_revenue).pack(side="left", padx=6)
+    common.make_button(date_row, "\U0001F4C5", on_pick_date, style="light",
+                       tip="Open a calendar and click a day to see its revenue.").pack(side="left")
+    common.make_button(date_row, "Show", refresh_revenue,
+                       tip="Recalculate the revenue for the date in the box.").pack(side="left", padx=6)
 
     page_hooks["Daily Revenue"] = refresh_revenue

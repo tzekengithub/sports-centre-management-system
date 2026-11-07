@@ -349,7 +349,7 @@ BOOKING_ACTIONS = [
      "Only cancelled bookings are listed. Click one, then click Delete Booking."),
 ]
 
-BOOKING_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Time':<12}{'Sport':<10}{'Ct':<3}{'Member':<8}"
+BOOKING_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Time':<12}{'Sport':<10}{'Court':<6}{'Member':<8}"
 
 
 def show_problem(error):
@@ -383,7 +383,7 @@ def booking_rows(status, search_text):
     rows = []
     for date_text, start_hour, booking_id, booking in sort_rows:
         rows.append((booking_id, (f"{booking_id:<8}{date_text:<11}{booking_time_text(booking):<12}"
-                                  f"{booking.get_sport():<10}{booking.get_court_no():<3}"
+                                  f"{booking.get_sport():<10}{booking.get_court_no():<6}"
                                   f"{booking.get_member_id():<8}")))
     return rows
 
@@ -394,7 +394,8 @@ def describe_booking(booking_id):
         if booking.get_booking_id() == booking_id:
             return (f"{booking.get_booking_id()}\n\n"
                     f"{booking.get_sport()}, Court {booking.get_court_no()}\n"
-                    f"{booking.get_date_text()}  {booking_time_text(booking)}\n"
+                    f"{booking.get_date_text()}  {booking_time_text(booking)} "
+                    f"({booking.get_duration_hrs()} hour(s))\n"
                     f"Member: {booking.get_member_id()}\n"
                     f"Price: RM {booking.get_price():.2f}\n"
                     f"Status: {booking.get_status()}")
@@ -451,7 +452,7 @@ def build_book_page(section_frame, page_hooks):
     controls_row = tk.Frame(section_frame, bg=common.APP_BG)
     controls_row.pack(side="top", fill="x")
     tk.Label(controls_row, text="Date", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left")
-    date_entry = common.make_entry(controls_row, width=12)
+    date_entry = common.make_entry(controls_row, width=12, tip="The day to check and book. Type it as YYYY-MM-DD, or click the calendar button.")
     date_entry.pack(side="left", padx=(6, 4))
     date_entry.insert(0, common.today_string())
 
@@ -468,7 +469,8 @@ def build_book_page(section_frame, page_hooks):
 
     tk.Label(book_bar, text="Member", font=common.LABEL_FONT, bg=common.PANEL_BG).pack(side="left")
     member_variable = tk.StringVar(value="")
-    member_menu = common.make_option_menu(book_bar, member_variable, [], width=24)
+    member_menu = common.make_option_menu(book_bar, member_variable, [], width=24,
+                                          tip="The member who is booking. Their bill is made later in Billing.")
     member_menu.pack(side="left", padx=(6, 12))
     selection_label = tk.Label(book_bar, text="", font=common.LABEL_FONT, bg=common.PANEL_BG)
     selection_label.pack(side="left")
@@ -509,18 +511,24 @@ def build_book_page(section_frame, page_hooks):
                 first_free_hour = next_hour
                 first_free_text = f"Court {court_index + 1} at {next_hour:02d}:00"
         info_label.config(text=(f"{sport}: RM {common.SPORTS[sport]['rate']:.0f} per hour.   "
-                                f"{free_count} free slots on {date_text}.   "
+                                f"{free_count} free 1-hour slots on {date_text}.   "
                                 f"Earliest free: {first_free_text}"))
 
-        tk.Label(grid_frame, text="", bg=common.APP_BG).grid(row=0, column=0)
+        tk.Label(grid_frame, text="Start time", font=common.SMALL_FONT, bg=common.APP_BG,
+                 fg=common.MUTED_TEXT_COLOR, anchor="w").grid(row=0, column=0, sticky="w")
         for column_index in range(len(hour_list)):
-            tk.Label(grid_frame, text=f"{hour_list[column_index]:02d}", font=common.SMALL_FONT,
-                     bg=common.APP_BG, fg=common.MUTED_TEXT_COLOR).grid(row=0, column=column_index + 1)
+            hour_label = tk.Label(grid_frame, text=f"{hour_list[column_index]:02d}:00", font=common.SMALL_FONT,
+                                  bg=common.APP_BG, fg=common.MUTED_TEXT_COLOR)
+            hour_label.grid(row=0, column=column_index + 1)
+            common.add_tooltip(hour_label, (f"The 1-hour slot from {hour_list[column_index]:02d}:00 to "
+                                            f"{hour_list[column_index] + 1:02d}:00."))
 
         for court_index in range(court_count):
             court_no = court_index + 1
-            tk.Label(grid_frame, text=f"Court {court_no}", font=common.BUTTON_FONT, bg=common.APP_BG,
-                     anchor="w").grid(row=court_no, column=0, sticky="w", padx=(0, 8), pady=2)
+            court_label = tk.Label(grid_frame, text=f"Court {court_no}", font=common.BUTTON_FONT, bg=common.APP_BG,
+                                   anchor="w")
+            court_label.grid(row=court_no, column=0, sticky="w", padx=(0, 8), pady=2)
+            common.add_tooltip(court_label, f"{sport} court number {court_no}. Each square to the right is one hour.")
             for row_index in range(len(hour_list)):
                 hour = hour_list[row_index]
                 is_selected = (grid_state["court"] == court_no and hour in grid_state["hours"])
@@ -538,6 +546,7 @@ def build_book_page(section_frame, page_hooks):
                                  command=make_cell_command(booking_list, court_no, hour,
                                                            grid[row_index][court_index]))
                 cell.grid(row=court_no, column=row_index + 1, padx=1, pady=2)
+                common.add_tooltip(cell, cell_tip_text(court_no, hour, cell_bg, sport))
 
         legend_row = tk.Frame(grid_frame, bg=common.APP_BG)
         legend_row.grid(row=court_count + 1, column=0, columnspan=len(hour_list) + 1, sticky="w", pady=(8, 0))
@@ -547,6 +556,18 @@ def build_book_page(section_frame, page_hooks):
             tk.Label(legend_row, text=legend_text, font=common.SMALL_FONT, bg=common.APP_BG).pack(
                 side="left", padx=(4, 14))
         update_selection_label()
+
+    def cell_tip_text(court_no, hour, cell_bg, sport):
+        """Return the hover hint for one grid cell, based on its colour."""
+        slot_text = f"Court {court_no}, {hour:02d}:00-{hour + 1:02d}:00"
+        if cell_bg == "#e3e6ea":
+            return f"{slot_text}: this time has already passed."
+        elif cell_bg == common.BOOKED_COLOR:
+            return f"{slot_text}: already booked. Click to see which booking."
+        elif cell_bg == common.SELECTED_COLOR:
+            return f"{slot_text}: selected. Click it again to clear your selection."
+        return (f"{slot_text}: free, RM {common.SPORTS[sport]['rate']:.2f} for this hour. Click to select it; "
+                "then click the hour next to it on the same court to book longer.")
 
     def make_cell_command(booking_list, court_no, hour, cell_value):
         """Return the command for one grid cell."""
@@ -589,7 +610,7 @@ def build_book_page(section_frame, page_hooks):
         end_hour = max(selected_hours) + 1
         price = common.SPORTS[grid_state["sport"]]["rate"] * len(selected_hours)
         selection_label.config(text=(f"Court {grid_state['court']}, {start_hour:02d}:00-{end_hour:02d}:00 "
-                                     f"({len(selected_hours)} h)  =  RM {price:.2f}"))
+                                     f"({len(selected_hours)} hour(s))  =  RM {price:.2f}"))
         book_button.config(state="normal")
 
     def clear_selection_and_redraw():
@@ -613,7 +634,8 @@ def build_book_page(section_frame, page_hooks):
             clear_selection_and_redraw()
 
     date_entry.bind("<KeyRelease>", on_date_typed)
-    common.make_button(controls_row, "\U0001F4C5", on_pick_date, style="light").pack(side="left")
+    common.make_button(controls_row, "\U0001F4C5", on_pick_date, style="light",
+                       tip="Open a calendar and click a day to show that day's courts.").pack(side="left")
     tk.Label(controls_row, text="Sport", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left", padx=(24, 6))
 
     def make_sport_command(sport_name):
@@ -634,7 +656,10 @@ def build_book_page(section_frame, page_hooks):
                 sport_buttons[sport_name].config(bg=common.PANEL_BG, fg=common.ACCENT_COLOR)
 
     for sport_name in common.SPORTS:
-        sport_button = common.make_button(controls_row, sport_name, make_sport_command(sport_name), style="light")
+        sport_info = common.SPORTS[sport_name]
+        sport_button = common.make_button(controls_row, sport_name, make_sport_command(sport_name), style="light",
+                                          tip=(f"Show the {sport_info['courts']} {sport_name} court(s). "
+                                               f"Price: RM {sport_info['rate']:.2f} per hour."))
         sport_button.pack(side="left", padx=2)
         sport_buttons[sport_name] = sport_button
 
@@ -657,7 +682,9 @@ def build_book_page(section_frame, page_hooks):
                                        f"Price: RM {new_booking.get_price():.2f}"))
         clear_selection_and_redraw()
 
-    book_button = common.make_button(book_bar, "Book", on_book)
+    book_button = common.make_button(book_bar, "Book", on_book,
+                                     tip="Book the hours you selected in the grid for the chosen member. "
+                                         "Select at least one free hour first.")
     book_button.pack(side="right")
 
     def on_show():

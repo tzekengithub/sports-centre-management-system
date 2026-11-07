@@ -535,8 +535,8 @@ COACHING_ACTIONS = [
      "Hours and commission per coach. Commission = fee per person x people enrolled x the coach's %."),
 ]
 
-COACH_LIST_HEADER = f"{'ID':<8}{'Name':<20}{'Sport':<11}{'Rate':>7}{'Comm%':>7}"
-CLASS_LIST_HEADER = f"{'ID':<7}{'Date':<11}{'Time':<12}{'Sport':<10}{'Type':<8}{'Pax':>5}"
+COACH_LIST_HEADER = f"{'ID':<8}{'Name':<20}{'Sport':<11}{'RM/hour':>8}{'Comm %':>8}"
+CLASS_LIST_HEADER = f"{'ID':<7}{'Date':<11}{'Time':<12}{'Sport':<10}{'Type':<8}{'People':>7}"
 
 HOUR_CHOICES = []
 for choice_hour in range(common.OPENING_HOUR, common.CLOSING_HOUR):
@@ -587,8 +587,8 @@ def coach_rows(search_text):
     rows = []
     for coach in coach_list:
         rows.append((coach.get_coach_id(), (f"{coach.get_coach_id():<8}{coach.get_name()[:19]:<20}"
-                                            f"{coach.get_sport():<11}{coach.get_hourly_rate():>7.2f}"
-                                            f"{coach.get_commission_pct():>7.0f}")))
+                                            f"{coach.get_sport():<11}{coach.get_hourly_rate():>8.2f}"
+                                            f"{coach.get_commission_pct():>8.0f}")))
     return rows
 
 
@@ -608,7 +608,7 @@ def class_rows(only_upcoming, only_with_space):
     for date_text, start_hour, class_id, sports_class in sort_rows:
         pax_text = f"{len(sports_class.get_participant_list())}/{sports_class.max_pax}"
         rows.append((class_id, (f"{class_id:<7}{date_text:<11}{sports_class.get_time_text():<12}"
-                                f"{sports_class.sport:<10}{sports_class.class_type:<8}{pax_text:>5}")))
+                                f"{sports_class.sport:<10}{sports_class.class_type:<8}{pax_text:>7}")))
     return rows
 
 
@@ -622,9 +622,10 @@ def describe_class(class_id):
     if coach is not None:
         coach_name = f"{sports_class.coach_id} {coach.get_name()}"
     return (f"{sports_class.class_id}\n\n{sports_class.sport} {sports_class.class_type}\n"
-            f"{sports_class.date_text}  {sports_class.get_time_text()}\n"
+            f"{sports_class.date_text}  {sports_class.get_time_text()} "
+            f"({sports_class.duration_hrs} hour(s))\n"
             f"Coach: {coach_name}\n"
-            f"Enrolled: {len(sports_class.get_participant_list())} of {sports_class.max_pax}\n"
+            f"Enrolled: {len(sports_class.get_participant_list())} of {sports_class.max_pax} people\n"
             f"Fee: RM {sports_class.fee_per_pax:.2f} per person")
 
 
@@ -673,16 +674,21 @@ def add_coach_fields(form_frame, first_row):
     return them as a dictionary (used by Manage Coaches)."""
     fields = {}
     fields["name"] = common.make_entry(form_frame)
-    common.add_form_row(form_frame, first_row, "Name", fields["name"])
+    common.add_form_row(form_frame, first_row, "Name", fields["name"],
+                        tip="The coach's full name. Letters, spaces, / and ' only (e.g. Ch'ng Wei).")
     fields["phone"] = common.make_entry(form_frame)
-    common.add_form_row(form_frame, first_row + 1, "Phone", fields["phone"])
+    common.add_form_row(form_frame, first_row + 1, "Phone", fields["phone"],
+                        tip="Malaysian mobile number: 10-11 digits starting with 01, no spaces or dashes.")
     fields["sport"] = tk.StringVar(value=common.COACHING_SPORTS[0])
     common.add_form_row(form_frame, first_row + 2, "Sport", common.make_option_menu(
-        form_frame, fields["sport"], list(common.COACHING_SPORTS), width=20))
+        form_frame, fields["sport"], list(common.COACHING_SPORTS), width=20),
+        tip="The sport this coach teaches. Their classes use this sport.")
     fields["rate"] = common.make_entry(form_frame, width=10)
-    common.add_form_row(form_frame, first_row + 3, "Hourly rate (RM)", fields["rate"])
+    common.add_form_row(form_frame, first_row + 3, "Hourly rate (RM/hour)", fields["rate"],
+                        tip="How much the coach is paid per hour, in Ringgit. A number from 1 to 500, e.g. 60.")
     fields["commission"] = common.make_entry(form_frame, width=10)
-    common.add_form_row(form_frame, first_row + 4, "Commission (%)", fields["commission"])
+    common.add_form_row(form_frame, first_row + 4, "Commission (%)", fields["commission"],
+                        tip="The share of class fees the coach earns, in percent. A number from 0 to 100, e.g. 30.")
     return fields
 
 
@@ -700,25 +706,33 @@ def add_class_time_fields(form_frame, first_row):
     Manage Classes)."""
     fields = {}
     date_row = tk.Frame(form_frame, bg=common.PANEL_BG)
-    fields["date"] = common.make_entry(date_row, width=12)
+    fields["date"] = common.make_entry(date_row, width=12,
+                                       tip="The day of the class, as YYYY-MM-DD. Today or later.")
     fields["date"].pack(side="left")
 
     def on_pick_date():
         """Open the calendar pop-up for the class date."""
         common.open_date_picker(form_frame, fields["date"])
 
-    common.make_button(date_row, "\U0001F4C5", on_pick_date, style="light").pack(side="left", padx=(4, 0))
+    common.make_button(date_row, "\U0001F4C5", on_pick_date, style="light",
+                       tip="Open a calendar and click the day of the class.").pack(side="left", padx=(4, 0))
     common.add_form_row(form_frame, first_row, "Date", date_row)
     fields["hour"] = tk.StringVar(value=HOUR_CHOICES[2])
     common.add_form_row(form_frame, first_row + 1, "Start time",
-                        common.make_option_menu(form_frame, fields["hour"], HOUR_CHOICES, width=8))
+                        common.make_option_menu(form_frame, fields["hour"], HOUR_CHOICES, width=8),
+                        tip=f"When the class starts (24-hour clock). The centre is open "
+                            f"{common.OPENING_HOUR:02d}:00-{common.CLOSING_HOUR:02d}:00.")
     fields["duration"] = tk.StringVar(value=DURATION_CHOICES[0])
     common.add_form_row(form_frame, first_row + 2, "Duration",
-                        common.make_option_menu(form_frame, fields["duration"], DURATION_CHOICES, width=8))
+                        common.make_option_menu(form_frame, fields["duration"], DURATION_CHOICES, width=8),
+                        tip=f"How long the class lasts, 1 to {MAX_CLASS_DURATION} hours. It must end by closing time.")
     fields["max_pax"] = common.make_entry(form_frame, width=10)
-    common.add_form_row(form_frame, first_row + 3, "Max people", fields["max_pax"])
+    common.add_form_row(form_frame, first_row + 3, f"Max people (1-{MAX_GROUP_SIZE})", fields["max_pax"],
+                        tip=f"How many members can join. A group takes 1 to {MAX_GROUP_SIZE}; "
+                            "a private session is always 1.")
     fields["fee"] = common.make_entry(form_frame, width=10)
-    common.add_form_row(form_frame, first_row + 4, "Fee per person (RM)", fields["fee"])
+    common.add_form_row(form_frame, first_row + 4, "Fee per person (RM)", fields["fee"],
+                        tip="What each member pays for the class, in Ringgit, e.g. 25.")
     return fields
 
 
@@ -811,7 +825,9 @@ def build_manage_classes_page(page_frame, page_hooks):
         """Add coach, type and the date/time/size/fee fields."""
         fields["coach"] = tk.StringVar(value="")
         fields["coach_menu"] = common.make_option_menu(form_frame, fields["coach"], [], width=24)
-        common.add_form_row(form_frame, 0, "Coach", fields["coach_menu"])
+        common.add_form_row(form_frame, 0, "Coach", fields["coach_menu"],
+                            tip="Who teaches the class. The class uses this coach's sport. "
+                                "Can't be changed after scheduling.")
         fields["type"] = tk.StringVar(value="Group")
         type_row = tk.Frame(form_frame, bg=common.PANEL_BG)
         for class_type in CLASS_TYPES:
@@ -820,7 +836,12 @@ def build_manage_classes_page(page_frame, page_hooks):
                                          activebackground=common.PANEL_BG)
             type_button.pack(side="left", padx=(0, 8))
             type_buttons.append(type_button)
-        common.add_form_row(form_frame, 1, "Type", type_row)
+            if class_type == "Private":
+                common.add_tooltip(type_button, "A private session: one coach and exactly 1 member.")
+            else:
+                common.add_tooltip(type_button, f"A group class: one coach and up to {MAX_GROUP_SIZE} members.")
+        common.add_form_row(form_frame, 1, "Type", type_row,
+                            tip="Private session or group class. Can't be changed after scheduling.")
         fields.update(add_class_time_fields(form_frame, 2))
 
     def set_locked(locked):
@@ -922,7 +943,8 @@ def build_enrol_page(page_frame):
         """Add the member drop-down."""
         form_widgets["member"] = tk.StringVar(value="")
         form_widgets["menu"] = common.make_option_menu(form_frame, form_widgets["member"], [], width=24)
-        common.add_form_row(form_frame, 0, "Member", form_widgets["menu"])
+        common.add_form_row(form_frame, 0, "Member", form_widgets["menu"],
+                            tip="The member to add. People already in this class are not listed.")
 
     def fill_form(class_id):
         """List only members who are not already in the picked class."""
@@ -1002,7 +1024,9 @@ def build_report_page(page_frame, page_hooks):
         refresh_report()
 
     month_menu = common.make_option_menu(top_row, month_variable, ["All time"],
-                                         command=on_month_changed, width=10)
+                                         command=on_month_changed, width=10,
+                                         tip="Pick a month (YYYY-MM) to see only that month's classes, "
+                                             "or All time for everything.")
     month_menu.pack(side="left", padx=6)
 
     def on_show():

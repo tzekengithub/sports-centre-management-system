@@ -114,10 +114,56 @@ FIELD_PAD = 6
 # ---------------------------------------------------------------------------
 # SHARED GUI BUILDING BLOCKS (so every tab looks and behaves the same)
 # ---------------------------------------------------------------------------
-def make_button(parent, text, command, style="primary", width=None):
+TOOLTIP_DELAY_MS = 450
+TOOLTIP_BG = "#fff8dc"
+
+
+def add_tooltip(widget, tip_text):
+    """Show a small yellow hint box explaining how to use widget when the
+    mouse rests on it for a moment; it disappears when the mouse leaves
+    or the widget is clicked. Does nothing if tip_text is None."""
+    if tip_text is None:
+        return
+    tip_state = {"window": None, "job": None}
+
+    def show_tip():
+        """Open the hint box just below the widget."""
+        tip_state["job"] = None
+        if tip_state["window"] is not None or not widget.winfo_exists():
+            return
+        x_position = widget.winfo_rootx() + 10
+        y_position = widget.winfo_rooty() + widget.winfo_height() + 4
+        tip_window = tk.Toplevel(widget)
+        tip_window.wm_overrideredirect(True)
+        tip_window.wm_geometry(f"+{x_position}+{y_position}")
+        tk.Label(tip_window, text=tip_text, font=SMALL_FONT, bg=TOOLTIP_BG, fg="#2b2b2b",
+                 relief="solid", bd=1, padx=7, pady=4, justify="left", wraplength=330).pack()
+        tip_state["window"] = tip_window
+
+    def hide_tip(event=None):
+        """Cancel a pending hint and close an open one."""
+        if tip_state["job"] is not None:
+            widget.after_cancel(tip_state["job"])
+            tip_state["job"] = None
+        if tip_state["window"] is not None:
+            tip_state["window"].destroy()
+            tip_state["window"] = None
+
+    def on_enter(event):
+        """Start the short wait before showing the hint."""
+        hide_tip()
+        tip_state["job"] = widget.after(TOOLTIP_DELAY_MS, show_tip)
+
+    widget.bind("<Enter>", on_enter, add="+")
+    widget.bind("<Leave>", hide_tip, add="+")
+    widget.bind("<ButtonPress>", hide_tip, add="+")
+
+
+def make_button(parent, text, command, style="primary", width=None, tip=None):
     """Create a button in one of the shared styles: 'primary' (green),
     'danger' (red, for permanent actions) or 'light' (white with green
-    text, for less important actions). Returns the Button."""
+    text, for less important actions), with an optional hover hint.
+    Returns the Button."""
     if style == "danger":
         background, foreground = DANGER_COLOR, BUTTON_TEXT_COLOR
     elif style == "light":
@@ -130,6 +176,7 @@ def make_button(parent, text, command, style="primary", width=None):
                        relief="flat", bd=0, padx=12, pady=5, cursor="hand2")
     if width is not None:
         button.config(width=width)
+    add_tooltip(button, tip)
     return button
 
 
@@ -139,27 +186,34 @@ def make_card(parent):
                     highlightbackground=BORDER_COLOR, highlightthickness=1)
 
 
-def add_form_row(form_frame, row_index, label_text, widget):
-    """Place a label and its input widget on one row of a grid form."""
-    tk.Label(form_frame, text=label_text, font=LABEL_FONT, bg=PANEL_BG,
-             anchor="w").grid(row=row_index, column=0, sticky="w", padx=(0, 10), pady=4)
+def add_form_row(form_frame, row_index, label_text, widget, tip=None):
+    """Place a label and its input widget on one row of a grid form. The
+    optional hover hint is shown on both the label and the input."""
+    row_label = tk.Label(form_frame, text=label_text, font=LABEL_FONT, bg=PANEL_BG, anchor="w")
+    row_label.grid(row=row_index, column=0, sticky="w", padx=(0, 10), pady=4)
     widget.grid(row=row_index, column=1, sticky="w", pady=4)
+    add_tooltip(row_label, tip)
+    add_tooltip(widget, tip)
 
 
-def make_entry(parent, width=24):
-    """Create a standard text-entry box."""
-    return tk.Entry(parent, font=ENTRY_FONT, width=width, relief="solid", bd=1)
+def make_entry(parent, width=24, tip=None):
+    """Create a standard text-entry box with an optional hover hint."""
+    entry = tk.Entry(parent, font=ENTRY_FONT, width=width, relief="solid", bd=1)
+    add_tooltip(entry, tip)
+    return entry
 
 
-def make_option_menu(parent, variable, choices, command=None, width=22):
+def make_option_menu(parent, variable, choices, command=None, width=22, tip=None):
     """Create a drop-down menu for the given choices (a list of strings).
-    command, if given, is called with the chosen value."""
+    command, if given, is called with the chosen value; tip is an
+    optional hover hint."""
     # Start with one blank entry, then fill in the real choices with the
     # same helper used when a list changes later.
     menu = tk.OptionMenu(parent, variable, "")
     set_option_menu_choices(menu, variable, choices, command)
     menu.config(font=ENTRY_FONT, width=width, bg=PANEL_BG, relief="solid", bd=1,
                 highlightthickness=0, anchor="w")
+    add_tooltip(menu, tip)
     return menu
 
 
@@ -252,7 +306,8 @@ def build_action_menu(window, title_text, action_list):
     for action_index, (action_name, menu_hint, page_instructions) in enumerate(action_list):
         cell = tk.Frame(button_grid, bg=APP_BG)
         cell.grid(row=action_index // column_count, column=action_index % column_count, padx=10, pady=8)
-        menu_button = make_button(cell, action_name, make_open_command(action_name), width=22)
+        menu_button = make_button(cell, action_name, make_open_command(action_name), width=22,
+                                  tip=page_instructions)
         menu_button.config(pady=10)
         menu_button.pack()
         tk.Label(cell, text=menu_hint, font=SMALL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR).pack(pady=(3, 0))
@@ -260,7 +315,8 @@ def build_action_menu(window, title_text, action_list):
         outer_page = tk.Frame(window, bg=APP_BG)
         top_row = tk.Frame(outer_page, bg=APP_BG)
         top_row.pack(side="top", fill="x", padx=16, pady=(12, 2))
-        make_button(top_row, "← Back", show_menu, style="light").pack(side="left")
+        make_button(top_row, "← Back", show_menu, style="light",
+                    tip="Go back to the list of actions for this tab.").pack(side="left")
         tk.Label(top_row, text=action_name, font=TITLE_FONT, bg=APP_BG,
                  fg=ACCENT_COLOR).pack(side="left", padx=14)
         tk.Label(outer_page, text=page_instructions, font=LABEL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
@@ -277,7 +333,7 @@ def build_action_menu(window, title_text, action_list):
 def build_pick_page(page_frame, list_header, load_rows, action_label, action_function,
                     describe=None, build_form=None, fill_form=None, confirm_text=None,
                     danger=False, search_label=None, summary_text=None,
-                    empty_text="Nothing to show here.", result_title="Done"):
+                    empty_text="Nothing to show here.", result_title="Done", action_tip=None):
     """Build a "pick one, then act" page: a list on the left and, on the
     right, the picked row's details plus ONE action button.
       load_rows(search_text)  -> list of (row_id, row_text) to list
@@ -301,10 +357,13 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
         search_row = tk.Frame(left_frame, bg=APP_BG)
         search_row.pack(side="top", fill="x", pady=(0, 6))
         tk.Label(search_row, text=search_label, font=LABEL_FONT, bg=APP_BG).pack(side="left")
-        search_entry = make_entry(search_row, width=18)
+        search_entry = make_entry(search_row, width=18,
+                                  tip=f"Type a {search_label} and press Enter or click Search. "
+                                      "Leave it empty to show everything.")
         search_entry.pack(side="left", padx=6)
 
     list_panel, listbox = build_list_panel(left_frame, list_header)
+    add_tooltip(listbox, "Click a row to see its details on the right.")
     list_panel.pack(side="top", fill="both", expand=True)
     summary_label = tk.Label(left_frame, text="", font=SMALL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
                              anchor="w", justify="left", wraplength=520)
@@ -388,14 +447,18 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
             refresh()
 
         search_entry.bind("<Return>", on_search_key)
-        make_button(search_row, "Search", refresh).pack(side="left")
+        make_button(search_row, "Search", refresh,
+                    tip="Show only the rows that match the text in the box.").pack(side="left")
 
+    if action_tip is None and action_label is not None:
+        action_tip = f"{action_label} for the row you clicked on the left."
     if action_label is None:
         action_button = None
     elif danger:
-        action_button = make_button(card, action_label, on_action, style="danger")
+        action_button = make_button(card, action_label, on_action, style="danger",
+                                    tip=action_tip + " You will be asked to confirm first.")
     else:
-        action_button = make_button(card, action_label, on_action)
+        action_button = make_button(card, action_label, on_action, tip=action_tip)
 
     return refresh
 
@@ -458,7 +521,9 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
     search_row = tk.Frame(left_frame, bg=APP_BG)
     search_row.pack(side="top", fill="x", pady=(0, 6))
     tk.Label(search_row, text=search_label, font=LABEL_FONT, bg=APP_BG).pack(side="left")
-    search_entry = make_entry(search_row, width=18)
+    search_entry = make_entry(search_row, width=18,
+                              tip=f"Type a {search_label} and press Enter or click Search. "
+                                  "Leave it empty to show everything.")
     search_entry.pack(side="left", padx=6)
     tk.Label(left_frame, text=" " + list_header, font=MONO_FONT, bg=APP_BG,
              fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x")
@@ -554,7 +619,8 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         for record_id, row_text in rows:
             row_frame = tk.Frame(rows_frame, bg=PANEL_BG, cursor="hand2")
             row_frame.pack(side="top", fill="x")
-            delete_button = make_button(row_frame, "Delete", make_row_delete(record_id), style="danger")
+            delete_button = make_button(row_frame, "Delete", make_row_delete(record_id), style="danger",
+                                        tip=f"Delete {record_id} permanently. You will be asked to confirm first.")
             delete_button.config(font=SMALL_FONT, padx=8, pady=1)
             delete_button.pack(side="right", padx=4, pady=2)
             row_label = tk.Label(row_frame, text=row_text, font=MONO_FONT, bg=PANEL_BG,
@@ -562,6 +628,7 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
             row_label.pack(side="left", fill="x", expand=True, padx=(2, 0))
             row_frame.bind("<Button-1>", make_row_click(record_id))
             row_label.bind("<Button-1>", make_row_click(record_id))
+            add_tooltip(row_label, f"Click to load {record_id} into the form and change it.")
             row_widgets[record_id] = (row_frame, row_label)
         highlight_row(page_state["editing_id"])
         if summary_text is not None:
@@ -583,10 +650,17 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         refresh_rows()
 
     search_entry.bind("<Return>", on_search_key)
-    make_button(search_row, "Search", refresh_rows).pack(side="left")
-    save_button = make_button(button_row, "Save Changes", on_save)
+    make_button(search_row, "Search", refresh_rows,
+                tip="Show only the rows that match the text in the box.").pack(side="left")
+    if add_label is None:
+        save_tip = f"Save the changes to the {item_name} you clicked."
+    else:
+        save_tip = (f"With a blank form: {add_label.lower()}. After clicking a row: "
+                    f"save the changes to that {item_name}.")
+    save_button = make_button(button_row, "Save Changes", on_save, tip=save_tip)
     save_button.pack(side="left")
-    new_button = make_button(button_row, "New", start_new, style="light")
+    new_button = make_button(button_row, "New", start_new, style="light",
+                             tip=f"Clear the form to add a new {item_name} instead.")
 
     def on_show():
         """Start with a blank form and a fresh list whenever the page opens."""
