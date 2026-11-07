@@ -77,8 +77,8 @@ Problem: Manage a sports centre's bookings, members, coaching and billing.
 |-- Module: Booking
 |   |-- Sub-task: Show court availability per hour, per court, per sport
 |   |   `-- build_availability_grid, count_free_slots_recursive, find_next_free_hour
-|   |-- Sub-task: Book / cancel / delete a booking
-|   |   `-- create_booking, cancel_booking, delete_booking, has_clash
+|   |-- Sub-task: Book / cancel a booking (cancelled bookings are kept)
+|   |   `-- create_booking, cancel_booking, has_clash
 |   `-- Sub-task: Find bookings
 |       `-- search_bookings
 |

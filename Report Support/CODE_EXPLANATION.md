@@ -170,15 +170,16 @@ Logic:
 - `find_next_free_hour(grid, hours, court_index)` - while-loop scan; used
   for the "Earliest free" hint above the grid.
 - `create_booking` (rejects past dates and clashes), `cancel_booking`,
-  `delete_booking` (CANCELLED only), `search_bookings` (`match`).
+  `search_bookings` (`match`). There is deliberately no delete: a
+  cancelled booking stays on record as CANCELLED, so the history is kept.
 - `booking_time_text`, `find_booking_at` - small display helpers.
 
 GUI (`build_booking_tab`) - menu of 3 actions, one page each:
 - **Book a Court** (`build_book_page`) - date + sport, a courts x hours
   grid (green free, red booked, grey past), click free hours on one
   court, pick the member, Book.
-- **Cancel a Booking** / **Delete a Booking** (`build_status_page`, a
-  `match` on the status) - pick a confirmed / cancelled booking and act.
+- **Cancel a Booking** (`build_cancel_page`) - pick a confirmed booking
+  and cancel it; it stays on record as CANCELLED.
   `booking_rows` filters by member with `search_bookings`.
 
 ## billing.py (Low Yee Zhe)
@@ -222,6 +223,19 @@ GUI (`build_billing_tab`) - menu of 6 actions, one page each:
   current tab and calls the module's `build_X_tab(content_frame)` with
   `if/elif`, so each tab always shows fresh data. Clicking the tab you
   are already on rebuilds it, which returns to its action menu.
+- **Exit warning:** `on_exit` asks "Are you sure you want to exit?" and is
+  used by both the Exit tab and the window's X button
+  (`root_window.protocol("WM_DELETE_WINDOW", on_exit)`).
+- **Dark mode:** `build_window_contents` builds the tab bar and tabs in
+  the current theme. The Dark Mode / Light Mode button calls
+  `on_theme_toggle`, which switches the palette with
+  `common.apply_theme`, saves the choice (`common.save_theme_choice` ->
+  `data/settings.txt`), destroys everything and rebuilds it on the same
+  tab. In `common.py`, `THEMES` holds the light and dark palettes;
+  `apply_theme` reassigns the shared colour names (`global`), and
+  `apply_widget_defaults` sets tkinter option-database defaults (text
+  colour, entry/list/menu colours) for options the code doesn't set
+  itself. `load_theme_choice` reads the saved theme at start-up.
 
 ---
 

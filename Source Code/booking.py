@@ -293,23 +293,6 @@ def cancel_booking(booking_id):
     common.write_lines(common.BOOKINGS_FILE, updated_lines)
 
 
-def delete_booking(booking_id):
-    """Permanently delete a booking, only if it is CANCELLED."""
-    booking_list = load_all_bookings()
-    remaining_lines = []
-    booking_found = False
-    for booking in booking_list:
-        if booking.get_booking_id() == booking_id:
-            booking_found = True
-            if booking.get_status() != "CANCELLED":
-                raise ValueError("Only CANCELLED bookings can be deleted.")
-        else:
-            remaining_lines.append(booking.to_line())
-    if not booking_found:
-        raise ValueError(f"No booking found with ID {booking_id}.")
-    common.write_lines(common.BOOKINGS_FILE, remaining_lines)
-
-
 def booking_time_text(booking):
     """Return a booking's time as e.g. '18:00-20:00'."""
     end_hour = booking.get_start_hour() + booking.get_duration_hrs()
@@ -336,7 +319,7 @@ def find_booking_at(booking_list, sport, court_no, date_text, hour):
 #   Book a Court     - date + sport, a courts x hours grid, click free
 #                      hours, pick the member, click Book
 #   Cancel a Booking - pick a confirmed booking, click Cancel Booking
-#   Delete a Booking - pick a cancelled booking, click Delete Booking
+# Cancelled bookings are never deleted: they stay on record as CANCELLED.
 # ---------------------------------------------------------------------------
 BOOKING_ACTIONS = [
     ("Book a Court", "See free courts and book one",
@@ -345,8 +328,6 @@ BOOKING_ACTIONS = [
     ("Cancel a Booking", "Cancel a confirmed booking",
      "Click the booking to cancel, then click Cancel Booking. Type a Member ID and click "
      "Search to find someone's bookings."),
-    ("Delete a Booking", "Remove a cancelled booking",
-     "Only cancelled bookings are listed. Click one, then click Delete Booking."),
 ]
 
 BOOKING_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Time':<12}{'Sport':<10}{'Court':<6}{'Member':<8}"
@@ -364,8 +345,7 @@ def build_booking_tab(parent):
     window = tk.Frame(parent, bg=common.APP_BG)
     page_frames, page_hooks = common.build_action_menu(window, "Facility & Court Booking", BOOKING_ACTIONS)
     build_book_page(page_frames["Book a Court"], page_hooks)
-    page_hooks["Cancel a Booking"] = build_status_page(page_frames["Cancel a Booking"], "CONFIRMED")
-    page_hooks["Delete a Booking"] = build_status_page(page_frames["Delete a Booking"], "CANCELLED")
+    page_hooks["Cancel a Booking"] = build_cancel_page(page_frames["Cancel a Booking"])
     return window
 
 
@@ -402,43 +382,28 @@ def describe_booking(booking_id):
     return "This booking no longer exists."
 
 
-def build_status_page(page_frame, status):
-    """Build the Cancel page (status CONFIRMED) or the Delete page (status
-    CANCELLED) and return its refresh function."""
+def build_cancel_page(page_frame):
+    """Build the Cancel a Booking page and return its refresh function.
+    Cancelled bookings are kept on record (status CANCELLED), never
+    deleted, so the centre keeps a full history."""
 
     def load_rows(search_text):
-        """List the bookings this page can act on."""
-        return booking_rows(status, search_text)
+        """Confirmed bookings only."""
+        return booking_rows("CONFIRMED", search_text)
 
     def cancel_action(booking_id):
         """Cancel the picked booking."""
         cancel_booking(booking_id)
-        return f"Booking {booking_id} cancelled."
-
-    def delete_action(booking_id):
-        """Delete the picked (cancelled) booking."""
-        delete_booking(booking_id)
-        return f"Booking {booking_id} deleted."
+        return f"Booking {booking_id} cancelled. It stays on record as CANCELLED."
 
     def cancel_question(booking_id):
         """Confirmation question for cancelling."""
-        return f"Cancel booking {booking_id}?"
+        return f"Cancel booking {booking_id}? This frees the court for others to book."
 
-    def delete_question(booking_id):
-        """Confirmation question for deleting."""
-        return f"Delete booking {booking_id} permanently?"
-
-    match status:
-        case "CONFIRMED":
-            return common.build_pick_page(page_frame, BOOKING_LIST_HEADER, load_rows, "Cancel Booking",
-                                          cancel_action, describe=describe_booking,
-                                          confirm_text=cancel_question, danger=True,
-                                          search_label="Member ID", empty_text="No confirmed bookings.")
-        case _:
-            return common.build_pick_page(page_frame, BOOKING_LIST_HEADER, load_rows, "Delete Booking",
-                                          delete_action, describe=describe_booking,
-                                          confirm_text=delete_question, danger=True,
-                                          search_label="Member ID", empty_text="No cancelled bookings.")
+    return common.build_pick_page(page_frame, BOOKING_LIST_HEADER, load_rows, "Cancel Booking",
+                                  cancel_action, describe=describe_booking, confirm_text=cancel_question,
+                                  danger=True, search_label="Member ID", empty_text="No confirmed bookings.",
+                                  action_tip="Cancel the booking you clicked. It stays on record as CANCELLED.")
 
 
 def build_book_page(section_frame, page_hooks):
@@ -533,7 +498,7 @@ def build_book_page(section_frame, page_hooks):
                 hour = hour_list[row_index]
                 is_selected = (grid_state["court"] == court_no and hour in grid_state["hours"])
                 if hour in past_hours:
-                    cell_bg, cell_text, cell_state = "#e3e6ea", "", "disabled"
+                    cell_bg, cell_text, cell_state = common.PAST_COLOR, "", "disabled"
                 elif grid[row_index][court_index] == "Booked":
                     cell_bg, cell_text, cell_state = common.BOOKED_COLOR, "✕", "normal"
                 elif is_selected:
@@ -551,7 +516,7 @@ def build_book_page(section_frame, page_hooks):
         legend_row = tk.Frame(grid_frame, bg=common.APP_BG)
         legend_row.grid(row=court_count + 1, column=0, columnspan=len(hour_list) + 1, sticky="w", pady=(8, 0))
         for legend_text, legend_color in (("Free", common.FREE_COLOR), ("Booked", common.BOOKED_COLOR),
-                                          ("Selected", common.SELECTED_COLOR), ("Past", "#e3e6ea")):
+                                          ("Selected", common.SELECTED_COLOR), ("Past", common.PAST_COLOR)):
             tk.Label(legend_row, text="   ", bg=legend_color).pack(side="left")
             tk.Label(legend_row, text=legend_text, font=common.SMALL_FONT, bg=common.APP_BG).pack(
                 side="left", padx=(4, 14))
@@ -560,7 +525,7 @@ def build_book_page(section_frame, page_hooks):
     def cell_tip_text(court_no, hour, cell_bg, sport):
         """Return the hover hint for one grid cell, based on its colour."""
         slot_text = f"Court {court_no}, {hour:02d}:00-{hour + 1:02d}:00"
-        if cell_bg == "#e3e6ea":
+        if cell_bg == common.PAST_COLOR:
             return f"{slot_text}: this time has already passed."
         elif cell_bg == common.BOOKED_COLOR:
             return f"{slot_text}: already booked. Click to see which booking."

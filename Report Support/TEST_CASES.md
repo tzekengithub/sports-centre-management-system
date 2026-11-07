@@ -58,12 +58,12 @@ workflow rules. "Actual" is what really happened, not a guess.
 | BKG-06 | (removed) `ignore_booking_id` / `update_booking` | - | Updating a booking was removed to keep the tab simple: cancel and re-book instead | n/a | n/a |
 | BKG-07 | Create booking, unknown member | "MEMXXX" | ValueError "no member found" | ValueError raised | PASS |
 | BKG-08 | `find_next_free_hour` (while loop) on a free court | court with no bookings | Returns opening hour | Returned opening hour | PASS |
-| BKG-09 | Cancel then delete a booking | own test booking | Status->CANCELLED, then removed from file | Both succeeded | PASS |
+| BKG-09 | Cancel a booking | own test booking | Status -> CANCELLED and the booking stays in bookings.txt (deleting bookings was removed in Entry 21) | Exactly so | PASS |
 | BKG-10 | Cancel an already-CANCELLED booking | same booking again | ValueError "already cancelled", blocked | ValueError raised | PASS |
-| BKG-11 | Delete a CONFIRMED booking directly | a CONFIRMED booking | ValueError "only CANCELLED can be deleted" | ValueError raised | PASS |
+| BKG-11 | (removed) deleting a booking | - | No delete exists any more: cancelled bookings are kept on record | n/a | n/a |
 | BKG-12 | `load_all_bookings` skips a malformed appended line | a line with 3 fields instead of 8 | No crash, malformed line skipped | Skipped correctly | PASS |
-| BKG-13 | GUI: every button on Court Availability and Bookings, blank fields | sport buttons, calendar, Book, Search, Cancel/Delete | No uncaught exception | Part of the 54-click run, no exception | PASS |
-| BKG-14 | GUI: book from the grid, then cancel | date 20 days ahead, click Court 1 10:00 then 11:00, Book; then Bookings -> Cancel Booking | BKG created for 10:00-12:00 at RM 40.00; after cancelling, the only button shown is Delete Booking | Exactly so | PASS |
+| BKG-13 | GUI: every button on Court Availability and Bookings, blank fields | sport buttons, calendar, Book, Search, Cancel Booking | No uncaught exception | Part of the 54-click run, no exception | PASS |
+| BKG-14 | GUI: book from the grid, then cancel | date 20 days ahead, click Court 1 10:00 then 11:00, Book; then Bookings -> Cancel Booking | BKG created for 10:00-12:00 at RM 40.00; after cancelling it disappears from Cancel a Booking but stays in bookings.txt as CANCELLED | Exactly so | PASS |
 
 ## Billing (billing.py)
 
@@ -143,6 +143,19 @@ workflow rules. "Actual" is what really happened, not a guess.
 | TIP-03 | Hint closes | move the mouse away; click a button | hint closes both times | Closed | PASS |
 | UNIT-01 | Booking grid columns show hours | open Book a Court | column labels 08:00, 09:00, ... 21:00 under "Start time"; info line says "free 1-hour slots" | Exactly so | PASS |
 | UNIT-02 | Units in lists and forms | coach list, class list, bill list, coach and class forms | RM/hour, Comm %, People, Total RM, Hourly rate (RM/hour), Commission (%), Max people (1-30), Fee per person (RM), durations in hours | All shown | PASS |
+
+## Exit warning, kept bookings, dark mode (Entry 21)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| EXIT-01 | Exit tab asks first | click Exit, answer No | "Are you sure you want to exit..." shown; program stays open | Exactly so | PASS |
+| EXIT-02 | Window X asks first | close the window, answer No | Same question; program stays open | Exactly so | PASS |
+| EXIT-03 | Exit after Yes | click Exit, answer Yes | Program closes | Closed | PASS |
+| BKG-15 | No way to delete a booking | open Booking | Actions are only Book a Court and Cancel a Booking; `delete_booking` no longer exists | Exactly so | PASS |
+| DARK-01 | Switch to dark mode keeps your place | on Coaching, click Dark Mode | Whole window redrawn dark, still on Coaching; data/settings.txt says theme=dark | Exactly so | PASS |
+| DARK-02 | No light-coloured leftovers | visit every menu and page (rows clicked) and the calendar pop-up in dark mode | No widget with a white/light background or black text | None found | PASS |
+| DARK-03 | Choice remembered | restart after choosing dark | Starts in dark mode | load_theme_choice() returned dark | PASS |
+| DARK-04 | Every button in dark mode, blank fields | crash run with theme=dark | No uncaught exception | None raised | PASS |
 
 ## Tab navigation (main.py)
 

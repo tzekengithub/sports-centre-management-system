@@ -44,8 +44,9 @@ Step 4: One window opens with a row of tabs along the top: Home,
         module in the same window. Each tab asks "What would you like
         to do?" - click an action (e.g. Register, Book a Court, Pay
         Bill) and it opens on its own page with one line of
-        instructions. "Back" returns to the actions. Click "Exit" to
-        close the whole program.
+        instructions. "Back" returns to the actions. "Dark Mode" (top
+        right) switches to dark colours and is remembered. Click "Exit"
+        (or the window's X) to close - it asks you to confirm first.
 
 The "data" folder and all five .txt files are created automatically the
 first time the program runs, already filled with a few sample records so

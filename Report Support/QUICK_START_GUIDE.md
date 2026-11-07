@@ -22,14 +22,18 @@ a new one.
 **Not sure what something does? Rest the mouse on it** - a yellow hint
 explains every button, box and grid square.
 
-Dates: type `YYYY-MM-DD` or click 📅. Red buttons are permanent and
+Dates: type `YYYY-MM-DD` or click 📅.
+
+**Dark mode:** click **☾ Dark Mode** at the top right (and **☀ Light Mode** to
+switch back). The program remembers your choice. **Exit** always asks
+before closing. Red buttons are permanent and
 always ask first.
 
 ## All actions
 
 | Tab | Actions |
 |---|---|
-| **Booking** | Book a Court · Cancel a Booking · Delete a Booking |
+| **Booking** | Book a Court · Cancel a Booking (cancelled bookings are kept on record) |
 | **Membership** | Register · Manage Members · Renew Membership |
 | **Coaching** | Manage Coaches · Manage Classes · Enrol Member · Remove Member · Hours & Commission |
 | **Billing** | Create Bill · Pay Bill · Void Bill · Delete Bill · View Receipt · Daily Revenue |

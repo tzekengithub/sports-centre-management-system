@@ -44,6 +44,9 @@ form again).
   and what to type (e.g. "A number from 1 to 500, e.g. 60").
 - **Units are always shown:** money in RM, times as 24-hour HH:00,
   durations in hours, commission in %, class sizes in people.
+- **Dark mode:** click **☾ Dark Mode** at the top right for dark colours,
+  and **☀ Light Mode** to switch back. The program remembers your choice
+  next time it starts.
 - **Mistakes never crash the program.** A message tells you what to fix,
   e.g. "Please enter a valid number for Hourly rate."
 - **Dates:** type `YYYY-MM-DD`, or click 📅 for a calendar pop-up.
@@ -57,8 +60,7 @@ form again).
 | Action | What you do |
 |---|---|
 | **Book a Court** | Pick a date and a sport. The grid shows every court (rows) and every 1-hour slot by its start time, 08:00 to 21:00 (columns): green = free, red ✕ = booked, grey = past. Click a free hour; click the next hour on the same court to book longer (click a selected hour again to clear). Pick the member and click **Book**. The bar shows the court, time and price. |
-| **Cancel a Booking** | Click the booking (search by Member ID if needed), then **Cancel Booking**. It stays on record as CANCELLED. |
-| **Delete a Booking** | Only cancelled bookings are listed. Click one, then **Delete Booking**. |
+| **Cancel a Booking** | Click the booking (search by Member ID if needed), then **Cancel Booking**. The court becomes free again. Cancelled bookings are never deleted - they stay on record as CANCELLED so the history is kept. |
 
 You can't book a time that's taken or in the past. To change a booking's
 time, cancel it and book the new time.
@@ -107,4 +109,6 @@ time, cancel it and book the new time.
 
 ## Closing the program
 
-Click the red **Exit** tab, or close the window.
+Click the red **Exit** tab, or close the window. Either way the program
+asks "Are you sure you want to exit?" first - click **Yes** to close or
+**No** to carry on. Everything you saved is kept.

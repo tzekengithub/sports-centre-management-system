@@ -87,12 +87,41 @@ BILL_STATUSES = ("UNPAID", "PAID", "VOID")
 # ---------------------------------------------------------------------------
 # GUI STYLE CONSTANTS (used by every module so the whole program looks alike)
 # ---------------------------------------------------------------------------
+# Two colour themes. Every widget takes its colours from the module-level
+# names below at the moment it is built, so switching theme = calling
+# apply_theme() and rebuilding the window (main.py does this).
+THEMES = {
+    "light": {
+        "APP_BG": "#f2f4f7", "PANEL_BG": "#ffffff", "TEXT_COLOR": "#1f2328",
+        "ACCENT_COLOR": "#2f6f4e", "BUTTON_COLOR": "#2f6f4e", "BUTTON_TEXT_COLOR": "#ffffff",
+        "DANGER_COLOR": "#8c1c1c", "MUTED_TEXT_COLOR": "#5b6573", "BORDER_COLOR": "#d9dee5",
+        "LIST_BORDER_COLOR": "#8a929c", "FREE_COLOR": "#d8efe0", "BOOKED_COLOR": "#f3d3d3",
+        "SELECTED_COLOR": "#f6c453", "PAST_COLOR": "#e3e6ea", "DISABLED_TEXT_COLOR": "#9aa3ad",
+        "TOOLTIP_BG": "#fff8dc", "TOOLTIP_TEXT_COLOR": "#2b2b2b",
+    },
+    "dark": {
+        "APP_BG": "#1c2026", "PANEL_BG": "#272c34", "TEXT_COLOR": "#e6e8eb",
+        "ACCENT_COLOR": "#7fd1a6", "BUTTON_COLOR": "#2f7d55", "BUTTON_TEXT_COLOR": "#ffffff",
+        "DANGER_COLOR": "#b13a3a", "MUTED_TEXT_COLOR": "#a3acb8", "BORDER_COLOR": "#3b424c",
+        "LIST_BORDER_COLOR": "#4b535e", "FREE_COLOR": "#245a40", "BOOKED_COLOR": "#6e3030",
+        "SELECTED_COLOR": "#b8892a", "PAST_COLOR": "#353b44", "DISABLED_TEXT_COLOR": "#6c7480",
+        "TOOLTIP_BG": "#3a3f47", "TOOLTIP_TEXT_COLOR": "#f2f2f2",
+    },
+}
+THEME_NAMES = ("light", "dark")
+current_theme = {"name": "light"}
+
 APP_BG = "#f2f4f7"
 PANEL_BG = "#ffffff"
+TEXT_COLOR = "#1f2328"
 ACCENT_COLOR = "#2f6f4e"
 BUTTON_COLOR = "#2f6f4e"
 BUTTON_TEXT_COLOR = "#ffffff"
 DANGER_COLOR = "#8c1c1c"
+LIST_BORDER_COLOR = "#8a929c"
+PAST_COLOR = "#e3e6ea"
+DISABLED_TEXT_COLOR = "#9aa3ad"
+TOOLTIP_TEXT_COLOR = "#2b2b2b"
 TITLE_FONT = ("Segoe UI", 16, "bold")
 LABEL_FONT = ("Segoe UI", 10)
 ENTRY_FONT = ("Segoe UI", 10)
@@ -118,6 +147,90 @@ TOOLTIP_DELAY_MS = 450
 TOOLTIP_BG = "#fff8dc"
 
 
+def apply_theme(theme_name):
+    """Switch every shared colour to the 'light' or 'dark' palette in
+    THEMES. Widgets built afterwards use the new colours."""
+    global APP_BG, PANEL_BG, TEXT_COLOR, ACCENT_COLOR, BUTTON_COLOR, BUTTON_TEXT_COLOR
+    global DANGER_COLOR, MUTED_TEXT_COLOR, BORDER_COLOR, LIST_BORDER_COLOR, FREE_COLOR
+    global BOOKED_COLOR, SELECTED_COLOR, PAST_COLOR, DISABLED_TEXT_COLOR, TOOLTIP_BG, TOOLTIP_TEXT_COLOR
+    if theme_name not in THEMES:
+        theme_name = "light"
+    palette = THEMES[theme_name]
+    APP_BG = palette["APP_BG"]
+    PANEL_BG = palette["PANEL_BG"]
+    TEXT_COLOR = palette["TEXT_COLOR"]
+    ACCENT_COLOR = palette["ACCENT_COLOR"]
+    BUTTON_COLOR = palette["BUTTON_COLOR"]
+    BUTTON_TEXT_COLOR = palette["BUTTON_TEXT_COLOR"]
+    DANGER_COLOR = palette["DANGER_COLOR"]
+    MUTED_TEXT_COLOR = palette["MUTED_TEXT_COLOR"]
+    BORDER_COLOR = palette["BORDER_COLOR"]
+    LIST_BORDER_COLOR = palette["LIST_BORDER_COLOR"]
+    FREE_COLOR = palette["FREE_COLOR"]
+    BOOKED_COLOR = palette["BOOKED_COLOR"]
+    SELECTED_COLOR = palette["SELECTED_COLOR"]
+    PAST_COLOR = palette["PAST_COLOR"]
+    DISABLED_TEXT_COLOR = palette["DISABLED_TEXT_COLOR"]
+    TOOLTIP_BG = palette["TOOLTIP_BG"]
+    TOOLTIP_TEXT_COLOR = palette["TOOLTIP_TEXT_COLOR"]
+    current_theme["name"] = theme_name
+
+
+def apply_widget_defaults(root_window):
+    """Set default colours (tkinter's option database) for widget options
+    the code doesn't set itself - text colour, entry and list boxes,
+    drop-down menus, radio buttons - so new widgets match the theme."""
+    defaults = (
+        ("*Foreground", TEXT_COLOR),
+        ("*Label.Foreground", TEXT_COLOR),
+        ("*Entry.Background", PANEL_BG),
+        ("*Entry.Foreground", TEXT_COLOR),
+        ("*Entry.insertBackground", TEXT_COLOR),
+        ("*Entry.disabledBackground", PAST_COLOR),
+        ("*Entry.disabledForeground", MUTED_TEXT_COLOR),
+        ("*Listbox.Background", PANEL_BG),
+        ("*Listbox.Foreground", TEXT_COLOR),
+        ("*Menubutton.Foreground", TEXT_COLOR),
+        ("*Menubutton.activeBackground", BORDER_COLOR),
+        ("*Menubutton.activeForeground", TEXT_COLOR),
+        ("*Menubutton.disabledForeground", DISABLED_TEXT_COLOR),
+        ("*Menu.Background", PANEL_BG),
+        ("*Menu.Foreground", TEXT_COLOR),
+        ("*Menu.activeBackground", BUTTON_COLOR),
+        ("*Menu.activeForeground", BUTTON_TEXT_COLOR),
+        ("*Radiobutton.Foreground", TEXT_COLOR),
+        ("*Radiobutton.activeForeground", TEXT_COLOR),
+        ("*Radiobutton.selectColor", PANEL_BG),
+        ("*Radiobutton.disabledForeground", DISABLED_TEXT_COLOR),
+        ("*Button.Foreground", TEXT_COLOR),
+        ("*Button.disabledForeground", DISABLED_TEXT_COLOR),
+        ("*Canvas.Background", PANEL_BG),
+    )
+    for option_pattern, option_value in defaults:
+        root_window.option_add(option_pattern, option_value)
+
+
+SETTINGS_FILE = os.path.join(DATA_FOLDER, "settings.txt")
+
+
+def load_theme_choice():
+    """Return the theme saved last time ('light' if none was saved yet).
+    The settings file is optional, so it is checked before reading."""
+    if not os.path.isfile(SETTINGS_FILE):
+        return "light"
+    for line in read_lines(SETTINGS_FILE):
+        if line.startswith("theme="):
+            theme_name = line[len("theme="):]
+            if theme_name in THEMES:
+                return theme_name
+    return "light"
+
+
+def save_theme_choice(theme_name):
+    """Remember the chosen theme for the next time the program starts."""
+    write_lines(SETTINGS_FILE, ["theme=" + theme_name])
+
+
 def add_tooltip(widget, tip_text):
     """Show a small yellow hint box explaining how to use widget when the
     mouse rests on it for a moment; it disappears when the mouse leaves
@@ -136,7 +249,7 @@ def add_tooltip(widget, tip_text):
         tip_window = tk.Toplevel(widget)
         tip_window.wm_overrideredirect(True)
         tip_window.wm_geometry(f"+{x_position}+{y_position}")
-        tk.Label(tip_window, text=tip_text, font=SMALL_FONT, bg=TOOLTIP_BG, fg="#2b2b2b",
+        tk.Label(tip_window, text=tip_text, font=SMALL_FONT, bg=TOOLTIP_BG, fg=TOOLTIP_TEXT_COLOR,
                  relief="solid", bd=1, padx=7, pady=4, justify="left", wraplength=330).pack()
         tip_state["window"] = tip_window
 
@@ -172,7 +285,7 @@ def make_button(parent, text, command, style="primary", width=None, tip=None):
         background, foreground = BUTTON_COLOR, BUTTON_TEXT_COLOR
     button = tk.Button(parent, text=text, command=command, font=BUTTON_FONT,
                        bg=background, fg=foreground, activebackground=background,
-                       activeforeground=foreground, disabledforeground="#9aa3ad",
+                       activeforeground=foreground, disabledforeground=DISABLED_TEXT_COLOR,
                        relief="flat", bd=0, padx=12, pady=5, cursor="hand2")
     if width is not None:
         button.config(width=width)
@@ -254,7 +367,8 @@ def build_list_panel(parent, header_text, height=14):
     scrollbar = tk.Scrollbar(list_holder)
     scrollbar.pack(side="right", fill="y")
     listbox = tk.Listbox(list_holder, font=MONO_FONT, height=height, yscrollcommand=scrollbar.set,
-                         activestyle="none", selectbackground=ACCENT_COLOR, relief="solid", bd=1,
+                         activestyle="none", selectbackground=BUTTON_COLOR,
+                         selectforeground=BUTTON_TEXT_COLOR, relief="solid", bd=1,
                          exportselection=False)
     listbox.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=listbox.yview)
@@ -467,7 +581,7 @@ def build_scroll_area(parent):
     """Build a bordered, vertically scrolling area for a list made of
     widgets (e.g. rows that each carry their own button, which a Listbox
     cannot hold). Returns the inner frame to pack the rows into."""
-    holder = tk.Frame(parent, bg=PANEL_BG, highlightbackground="#000000", highlightthickness=1)
+    holder = tk.Frame(parent, bg=PANEL_BG, highlightbackground=LIST_BORDER_COLOR, highlightthickness=1)
     holder.pack(side="top", fill="both", expand=True)
     canvas = tk.Canvas(holder, bg=PANEL_BG, highlightthickness=0)
     scrollbar = tk.Scrollbar(holder, command=canvas.yview)
@@ -789,10 +903,10 @@ def open_date_picker(parent, target_entry, on_picked=None):
         rebuild_calendar()
 
     tk.Button(header_frame, text="<", width=3, font=BUTTON_FONT,
-              bg=ACCENT_COLOR, fg=BUTTON_TEXT_COLOR, command=go_previous_month).pack(side="left", padx=5)
+              bg=BUTTON_COLOR, fg=BUTTON_TEXT_COLOR, command=go_previous_month).pack(side="left", padx=5)
     month_label.pack(side="left", padx=5)
     tk.Button(header_frame, text=">", width=3, font=BUTTON_FONT,
-              bg=ACCENT_COLOR, fg=BUTTON_TEXT_COLOR, command=go_next_month).pack(side="left", padx=5)
+              bg=BUTTON_COLOR, fg=BUTTON_TEXT_COLOR, command=go_next_month).pack(side="left", padx=5)
 
     weekday_frame = tk.Frame(picker_window, bg=PANEL_BG)
     weekday_frame.pack()
@@ -833,7 +947,7 @@ def open_date_picker(parent, target_entry, on_picked=None):
         for day_value in range(1, total_days + 1):
             is_today = (year == today.year and month == today.month and day_value == today.day)
             if is_today:
-                button_bg = ACCENT_COLOR
+                button_bg = SELECTED_COLOR
             else:
                 button_bg = BUTTON_COLOR
             day_button = tk.Button(days_frame, text=str(day_value), width=4, font=LABEL_FONT,

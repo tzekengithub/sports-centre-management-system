@@ -56,18 +56,14 @@ TAB_BAR_HEIGHT = 50
 # Hover hints for the tab bar.
 TAB_TIPS = {
     "home": "Start page: open a module or read How to Use This System.",
-    "booking": "See which courts are free each hour and book them; cancel or delete bookings.",
+    "booking": "See which courts are free each hour and book them; cancel bookings.",
     "membership": "Register new members, update or delete them, renew memberships.",
     "coaching": "Coaches, classes, enrolment, and each coach's hours and commission.",
     "billing": "Create bills, take payments, view receipts and daily revenue.",
 }
 
-# Colours for the selected tab (looks "pressed in", same colour as the
-# page below it) and for the other tabs (normal green buttons).
-ACTIVE_TAB_BG = common.APP_BG
-ACTIVE_TAB_FG = common.ACCENT_COLOR
-INACTIVE_TAB_BG = common.BUTTON_COLOR
-INACTIVE_TAB_FG = common.BUTTON_TEXT_COLOR
+EXIT_QUESTION = ("Are you sure you want to exit the Sports Centre Management System?\n\n"
+                 "Everything you have saved is kept.")
 
 WELCOME_MESSAGE = (
     "Welcome! This program manages a sports centre's bookings, members, "
@@ -82,6 +78,7 @@ WELCOME_MESSAGE = (
     "Click Back (or the tab again) to choose another action.\n\n"
     "Not sure what something does? Rest the mouse on any button, box "
     "or grid square for a moment and a yellow hint explains it.\n\n"
+    "Prefer a dark screen? Click Dark Mode at the top right.\n\n"
     "Sample data is already loaded (members MEM001-MEM004 and so on), "
     "so you can try things straight away."
 )
@@ -103,12 +100,10 @@ def build_home_tab(parent, switch_to_tab):
              bg=common.APP_BG, fg=common.ACCENT_COLOR).pack(pady=(40, 10))
     tk.Label(home_frame, text="Select a module below, or use the tabs along the top",
              font=common.LABEL_FONT, bg=common.APP_BG).pack(pady=(0, 10))
-    help_button = tk.Button(home_frame, text="How to Use This System", width=30, font=common.BUTTON_FONT,
-                            bg=common.ACCENT_COLOR, fg=common.BUTTON_TEXT_COLOR,
-                            command=show_welcome_message)
+    help_button = common.make_button(home_frame, "How to Use This System", show_welcome_message, width=30,
+                                     tip="A short guide to the whole program. Tip: rest the mouse on any "
+                                         "button or box to see what it does.")
     help_button.pack(pady=(0, 15))
-    common.add_tooltip(help_button, "A short guide to the whole program. Tip: rest the mouse on any "
-                                    "button or box to see what it does.")
 
     menu_frame = tk.Frame(home_frame, bg=common.APP_BG)
     menu_frame.pack(pady=10)
@@ -128,25 +123,26 @@ def build_home_tab(parent, switch_to_tab):
     ]
 
     for item_label, tab_name in menu_items:
-        menu_button = tk.Button(menu_frame, text=item_label, width=30, font=common.BUTTON_FONT,
-                                bg=common.BUTTON_COLOR, fg=common.BUTTON_TEXT_COLOR,
-                                command=make_menu_command(tab_name))
-        menu_button.pack(pady=6)
-        common.add_tooltip(menu_button, TAB_TIPS[tab_name])
+        common.make_button(menu_frame, item_label, make_menu_command(tab_name), width=30,
+                           tip=TAB_TIPS[tab_name]).pack(pady=6)
 
     return home_frame
 
 
-def main():
-    """Build the single main window with its tab bar and run it."""
-    is_first_run = common.ensure_data_files_exist()
+def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
+    """Build the tab bar and content area inside root_window using the
+    current theme's colours, and show start_tab. Returns a function that
+    tells which tab is showing (used to come back to it after the theme
+    is switched)."""
+    # Selected tab looks "pressed in" (same colour as the page below it);
+    # the other tabs are normal buttons. Read here, not at import time,
+    # so they follow the current theme.
+    active_tab_bg = common.APP_BG
+    active_tab_fg = common.ACCENT_COLOR
+    inactive_tab_bg = common.BUTTON_COLOR
+    inactive_tab_fg = common.BUTTON_TEXT_COLOR
 
-    root_window = tk.Tk()
-    root_window.title("Sports Centre Management System")
     root_window.configure(bg=common.APP_BG)
-    common.centre_window(root_window, common.WINDOW_WIDTH,
-                         common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
-    root_window.minsize(common.WINDOW_WIDTH, common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
 
     # Tab bar is packed first (side="top") so it always keeps its space
     # above the content area, which expands to fill the rest.
@@ -193,9 +189,9 @@ def main():
         for other_tab_name in TAB_ORDER:
             other_button = tab_buttons[other_tab_name]
             if other_tab_name == tab_name:
-                other_button.config(bg=ACTIVE_TAB_BG, fg=ACTIVE_TAB_FG, relief="flat")
+                other_button.config(bg=active_tab_bg, fg=active_tab_fg, relief="flat")
             else:
-                other_button.config(bg=INACTIVE_TAB_BG, fg=INACTIVE_TAB_FG, relief="flat")
+                other_button.config(bg=inactive_tab_bg, fg=inactive_tab_fg, relief="flat")
 
     def make_tab_command(tab_name):
         """Return the command for one tab button: switch to tab_name."""
@@ -205,22 +201,85 @@ def main():
         return tab_command
 
     for tab_name in TAB_ORDER:
-        tab_button = tk.Button(tab_bar, text=TAB_LABELS[tab_name], width=14,
+        tab_button = tk.Button(tab_bar, text=TAB_LABELS[tab_name], width=12,
                                font=common.BUTTON_FONT, bd=0, pady=12,
-                               bg=INACTIVE_TAB_BG, fg=INACTIVE_TAB_FG,
-                               activebackground=ACTIVE_TAB_BG,
-                               activeforeground=ACTIVE_TAB_FG,
+                               bg=inactive_tab_bg, fg=inactive_tab_fg,
+                               activebackground=active_tab_bg,
+                               activeforeground=active_tab_fg,
                                command=make_tab_command(tab_name))
         tab_button.pack(side="left")
         common.add_tooltip(tab_button, TAB_TIPS[tab_name])
         tab_buttons[tab_name] = tab_button
 
-    tk.Button(tab_bar, text="Exit", width=10, font=common.BUTTON_FONT, bd=0, pady=12,
-              bg=common.DANGER_COLOR, fg=common.BUTTON_TEXT_COLOR,
-              command=root_window.destroy).pack(side="right")
-    common.add_tooltip(tab_bar.winfo_children()[-1], "Close the program. Everything is already saved.")
+    exit_button = tk.Button(tab_bar, text="Exit", width=8, font=common.BUTTON_FONT, bd=0, pady=12,
+                            bg=common.DANGER_COLOR, fg=common.BUTTON_TEXT_COLOR,
+                            activebackground=common.DANGER_COLOR, activeforeground=common.BUTTON_TEXT_COLOR,
+                            command=on_exit)
+    exit_button.pack(side="right")
+    common.add_tooltip(exit_button, "Close the program (you will be asked to confirm). "
+                                    "Everything is already saved.")
 
-    switch_to_tab("home")
+    if common.current_theme["name"] == "dark":
+        theme_button_text = "☀ Light Mode"
+        theme_tip = "Switch back to the light colours. Your choice is remembered next time."
+    else:
+        theme_button_text = "☾ Dark Mode"
+        theme_tip = "Switch to dark colours, easier on the eyes at night. Your choice is remembered next time."
+    theme_button = tk.Button(tab_bar, text=theme_button_text, width=13, font=common.BUTTON_FONT, bd=0, pady=12,
+                             bg=inactive_tab_bg, fg=inactive_tab_fg, activebackground=active_tab_bg,
+                             activeforeground=active_tab_fg, command=on_theme_toggle)
+    theme_button.pack(side="right")
+    common.add_tooltip(theme_button, theme_tip)
+
+    switch_to_tab(start_tab)
+
+    def get_current_tab():
+        """Return the name of the tab that is showing."""
+        return tab_state["current_tab"]
+
+    return get_current_tab
+
+
+def main():
+    """Build the single main window with its tab bar and run it."""
+    is_first_run = common.ensure_data_files_exist()
+    common.apply_theme(common.load_theme_choice())
+
+    root_window = tk.Tk()
+    root_window.title("Sports Centre Management System")
+    common.centre_window(root_window, common.WINDOW_WIDTH,
+                         common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
+    root_window.minsize(common.WINDOW_WIDTH, common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
+    window_state = {"get_current_tab": None}
+
+    def on_exit():
+        """Ask before closing - used by the Exit tab AND the window's X."""
+        if messagebox.askyesno("Exit", EXIT_QUESTION, icon="warning"):
+            root_window.destroy()
+
+    def on_theme_toggle():
+        """Switch light <-> dark, remember the choice, and rebuild the whole
+        window in the new colours, staying on the same tab."""
+        if common.current_theme["name"] == "dark":
+            new_theme = "light"
+        else:
+            new_theme = "dark"
+        current_tab = window_state["get_current_tab"]()
+        common.apply_theme(new_theme)
+        try:
+            common.save_theme_choice(new_theme)
+        except OSError:
+            # Not being able to remember the choice is not worth an error box.
+            pass
+        for child_widget in root_window.winfo_children():
+            child_widget.destroy()
+        common.apply_widget_defaults(root_window)
+        window_state["get_current_tab"] = build_window_contents(root_window, current_tab,
+                                                                on_theme_toggle, on_exit)
+
+    root_window.protocol("WM_DELETE_WINDOW", on_exit)
+    common.apply_widget_defaults(root_window)
+    window_state["get_current_tab"] = build_window_contents(root_window, "home", on_theme_toggle, on_exit)
 
     if is_first_run:
         root_window.after(200, show_welcome_message)

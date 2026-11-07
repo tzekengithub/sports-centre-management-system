@@ -483,6 +483,33 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   events and screenshots weren't possible); 82-click blank-input run
   with no exception. Please hover over a few things once by eye.
 
+## Entry 21 - Exit warning, keep cancelled bookings, dark mode
+- **Asked:** Warn before exiting; don't delete cancelled bookings;
+  enable dark mode.
+- **Produced:**
+  - Exit warning: the Exit tab and the window's X both ask "Are you
+    sure you want to exit?" (`on_exit` in `main.py`).
+  - Booking's Delete a Booking action and `delete_booking` were removed.
+    A cancelled booking now always stays in bookings.txt as CANCELLED.
+  - Dark mode: a ☾ Dark Mode / ☀ Light Mode button in the tab bar.
+    `common.THEMES` has a light and a dark palette; `apply_theme`
+    swaps the shared colours, `apply_widget_defaults` sets tkinter's
+    option-database defaults for colours the code doesn't set itself,
+    and `main.py` rebuilds the window on the same tab. The choice is
+    saved in data/settings.txt (ignored by git, like the rest of
+    data/). The few hard-coded colours (past slots, tooltip, list
+    border, calendar buttons) now come from the palette.
+- **Caught and fixed while testing:** removing `delete_booking` by
+  cutting text also removed two helpers below it (`booking_time_text`,
+  `find_booking_at`), which raised a NameError on Cancel a Booking.
+  Restored from git; added an undefined-name scan of every file to the
+  checks.
+- **Verify:** EXIT-01 to DARK-04 in `TEST_CASES.md`: both exit paths
+  ask and Yes closes; every page and the calendar in dark mode have no
+  light-coloured widgets left; the choice survives a restart; crash runs
+  in light (80 clicks) and dark (75 clicks) with no exception. The screen
+  was off, so no screenshots - please look at dark mode once by eye.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

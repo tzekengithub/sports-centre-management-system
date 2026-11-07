@@ -22,7 +22,6 @@
    - **Screenshot:** booking confirmation.
 2. **Cancel a Booking:** click a confirmed booking, click Cancel Booking.
    - **Screenshot:** cancel confirmation.
-3. **Delete a Booking:** click a cancelled booking, click Delete Booking.
 
 ## Module 2 - Membership Registration
 1. **Register:** name, phone, click a membership card, click Register.
@@ -61,5 +60,12 @@
 4. **Daily Revenue:** pick a date; four categories and the total.
    - **Screenshot:** daily revenue.
 
+## Dark mode
+Click **☾ Dark Mode** at the top right; **☀ Light Mode** switches back. The
+choice is remembered.
+   - **Screenshot:** a page in dark mode.
+
 ## Closing the program
-Click the red **Exit** tab, or close the window.
+Click the red **Exit** tab, or close the window. The program asks "Are
+you sure you want to exit?" first.
+   - **Screenshot:** the exit question.
