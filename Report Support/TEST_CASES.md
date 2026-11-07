@@ -23,7 +23,7 @@ workflow rules. "Actual" is what really happened, not a guess.
 | MEM-08 | Delete member with an UNPAID bill | member with a generated UNPAID retail bill | ValueError, blocked | ValueError raised | PASS |
 | MEM-09 | Load members.txt with a malformed trailing line appended | a line with only 2 fields | Malformed line skipped, no crash, 4 real members still loaded | Skipped correctly, no crash | PASS |
 | MEM-10 | Load members.txt with blank trailing lines | two trailing `\n\n` appended | Blank lines ignored, 4 members still loaded | 4 members loaded | PASS |
-| MEM-11 | ID regenerated after deleting the highest record | register, note ID, delete, register again | Same ID reused (no gap, no duplicate) | Same ID reused correctly | PASS |
+| MEM-11 | ID not reused after deleting the highest record | register, note ID, delete, register again | Next number is used; the deleted ID is never handed out again (changed in Entry 22) | New ID one higher | PASS |
 | MEM-12 | GUI: every button on Register and Members clicked with blank fields | Register, Search, Save Changes, Renew, Delete | No uncaught exception; each shows a clear message | Part of the 54-click run, no exception | PASS |
 | MEM-13 | GUI: register through the type cards | name "ravi a/l kumar", phone 0177770000, Youth card, Register | New ID shown, name stored as "Ravi a/l Kumar", fee reminder shown | MEM006 created exactly so | PASS |
 
@@ -156,6 +156,30 @@ workflow rules. "Actual" is what really happened, not a guess.
 | DARK-02 | No light-coloured leftovers | visit every menu and page (rows clicked) and the calendar pop-up in dark mode | No widget with a white/light background or black text | None found | PASS |
 | DARK-03 | Choice remembered | restart after choosing dark | Starts in dark mode | load_theme_choice() returned dark | PASS |
 | DARK-04 | Every button in dark mode, blank fields | crash run with theme=dark | No uncaught exception | None raised | PASS |
+
+## Tester's fixes T1-T13 (Entry 22)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| T1-01 | Duplicate coach phone on add | add a coach with an existing coach's phone | Rejected: phone already used | Rejected | PASS |
+| T1-02 | Duplicate coach phone on update | change a coach's phone to another coach's | Rejected; keeping their own phone is allowed | Exactly so | PASS |
+| T1-03 | Search classes by sport | Manage Classes, search "ten" | Only Tennis classes | Exactly so | PASS |
+| T1-04 | Search Enrol by coach name / Remove by member name | type part of a name | Matching rows only | Exactly so | PASS |
+| T1-05 | Hours & Commission names and search | open the page, search a coach name | Coach name is the first column; search shows only that coach | Exactly so | PASS |
+| T1-06 | ID column headers | open class, coach, member, booking, bill lists | Headers read Class ID / Coach ID / Member ID / Booking ID / Bill ID | Exactly so | PASS |
+| T2-01 | Date saved in standard form | schedule a class on 2026-12-7 | Saved as 2026-12-07; clash with a class typed 2026-12-07 still found | Exactly so | PASS |
+| T3-01 | Start hour already passed today | schedule a class / book a court today at an hour that has begun | Rejected: already started | Rejected | PASS |
+| T4-01 | File can't be saved | data file path is a folder | Friendly "Could not save ..." message, no crash | Exactly so | PASS |
+| T5-01 | Damaged line kept | add a broken line to classes.txt, then update a class | Broken line still in the file | Kept | PASS |
+| T6-01 | ID never reused | delete CLS900 (newest), schedule a class | New class is CLS901 | CLS901 | PASS |
+| T7-01 | Fee rounds before the minimum check | fee 0.004 | Rejected (rounds to 0.00) | Rejected | PASS |
+| T8-01 | Large totals | 3000 classes and 3000 bills | Totals worked out, no RecursionError | Exactly so | PASS |
+| T9-01 | File saved with a BOM | members.txt starting with a BOM | First member still read; next ID doesn't restart at 001 | Exactly so | PASS |
+| T10-01 | Enrol in a past class | enrol_participant on a class dated yesterday | Rejected: already taken place | Rejected | PASS |
+| T11-01 | Private class member | Manage Classes, Private, pick a member, Schedule | Member row shown only for Private; class saved with that member (1/1) | Exactly so | PASS |
+| T12-01 | Labelled details | click a row on any pick page | Lines like "Class ID:   CLS001", "Sport:      Tennis" | Exactly so | PASS |
+| T13-01 | Long names cut | a member named Nurul Aisyah binti Abdullah | List shows the name ending in "…" | Exactly so | PASS |
+| T-ALL | Every button, blank fields | crash run (77 clicks) | No uncaught exception | None raised | PASS |
 
 ## Tab navigation (main.py)
 

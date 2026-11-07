@@ -239,7 +239,9 @@ def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amo
                 raise ValueError("Enter a retail item name.")
             if common.contains_forbidden_character(retail_item_name):
                 raise ValueError("Retail item name cannot contain '|' or ';'.")
-            if not (0 < retail_amount <= MAX_RETAIL_AMOUNT):
+            # Round first: that is the value that gets saved.
+            retail_amount = round(retail_amount, 2)
+            if not (0.01 <= retail_amount <= MAX_RETAIL_AMOUNT):
                 raise ValueError(f"Retail amount must be between RM 0.01 and RM {MAX_RETAIL_AMOUNT:g}.")
             amount = retail_amount
             description = f"Retail item: {retail_item_name}"
@@ -352,7 +354,7 @@ def pay_bill(bill_id, payment_method, amount_tendered):
     updated_lines = []
     for bill in bill_list:
         updated_lines.append(bill.to_line())
-    common.write_lines(common.BILLS_FILE, updated_lines)
+    common.rewrite_records(common.BILLS_FILE, updated_lines, line_to_bill)
 
     write_receipt(target_bill, payment_method, amount_tendered, change)
     return target_bill, change
@@ -431,7 +433,7 @@ def void_bill(bill_id):
     updated_lines = []
     for bill in bill_list:
         updated_lines.append(bill.to_line())
-    common.write_lines(common.BILLS_FILE, updated_lines)
+    common.rewrite_records(common.BILLS_FILE, updated_lines, line_to_bill)
 
 
 def delete_void_bill(bill_id):
@@ -448,7 +450,7 @@ def delete_void_bill(bill_id):
             remaining_lines.append(bill.to_line())
     if not bill_found:
         raise ValueError(f"No bill found with ID {bill_id}.")
-    common.write_lines(common.BILLS_FILE, remaining_lines)
+    common.rewrite_records(common.BILLS_FILE, remaining_lines, line_to_bill)
 
 
 def daily_revenue_summary(date_text):
@@ -478,6 +480,18 @@ def daily_revenue_summary(date_text):
             unpaid_count += 1
 
     return category_totals, grand_total, bill_count, paid_count, unpaid_count
+
+
+def total_bills(bill_list):
+    """Add up bill totals: recursively (rubric) for normal sizes, with a
+    plain loop above common.RECURSION_SAFE_LIMIT, where recursion would
+    crash."""
+    if len(bill_list) <= common.RECURSION_SAFE_LIMIT:
+        return total_bills_recursive(bill_list)
+    running_total = 0.0
+    for bill in bill_list:
+        running_total += bill.get_total()
+    return running_total
 
 
 def total_bills_recursive(bill_list, index=0):
@@ -526,7 +540,7 @@ METHOD_TIPS = {
     "Card": "Paid by card. Always the exact total.",
     "E-Wallet": "Paid by e-wallet. Always the exact total.",
 }
-BILL_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Member':<8}{'For':<16}{'Total RM':>9}"
+BILL_LIST_HEADER = f"{'Bill ID':<9}{'Date':<11}{'Member ID':<10}{'For':<16}{'Total RM':>9}"
 
 
 def show_problem(error):
@@ -560,8 +574,8 @@ def bill_rows_with_status(status, search_text):
     while index >= 0:
         bill = bill_list[index]
         category_name = common.BILL_CATEGORY_NAMES.get(bill.get_category(), bill.get_category())
-        rows.append((bill.get_bill_id(), (f"{bill.get_bill_id():<8}{bill.get_date_text():<11}"
-                                          f"{bill.get_member_id():<8}{category_name:<16}{bill.get_total():>9.2f}")))
+        rows.append((bill.get_bill_id(), (f"{bill.get_bill_id():<9}{bill.get_date_text():<11}"
+                                          f"{bill.get_member_id():<10}{category_name:<16}{bill.get_total():>9.2f}")))
         index -= 1
     return rows
 
@@ -572,13 +586,18 @@ def describe_bill(bill_id):
     if bill is None:
         return "This bill no longer exists."
     category_name = common.BILL_CATEGORY_NAMES.get(bill.get_category(), bill.get_category())
-    return (f"{bill.get_bill_id()}   {bill.get_payment_status()}\n\n"
-            f"Member: {bill.get_member_id()}\n"
-            f"{category_name}: {bill.get_description()}\n"
-            f"Date: {bill.get_date_text()}\n\n"
-            f"Amount     RM {bill.get_amount():>8.2f}\n"
-            f"Discount - RM {bill.get_discount():>8.2f}\n"
-            f"Total      RM {bill.get_total():>8.2f}")
+    return common.details_text([
+        ("Bill ID", bill.get_bill_id()),
+        ("Status", bill.get_payment_status()),
+        ("Member ID", bill.get_member_id()),
+        ("For", category_name),
+        ("Item", bill.get_description()),
+        ("Date", bill.get_date_text()),
+        ("", ""),
+        ("Amount", f"RM {bill.get_amount():>8.2f}"),
+        ("Discount", f"RM {bill.get_discount():>8.2f}"),
+        ("Total", f"RM {bill.get_total():>8.2f}"),
+    ])
 
 
 def build_status_page(page_frame, status):
@@ -686,7 +705,7 @@ def build_pay_page(page_frame):
     def unpaid_summary():
         """Total still owed, added up recursively."""
         unpaid_bills = search_bills(load_all_bills(), "status", "UNPAID")
-        return f"{len(unpaid_bills)} unpaid bill(s), RM {total_bills_recursive(unpaid_bills):.2f} still owed."
+        return f"{len(unpaid_bills)} unpaid bill(s), RM {total_bills(unpaid_bills):.2f} still owed."
 
     return common.build_pick_page(page_frame, BILL_LIST_HEADER, load_rows, "Pay", pay_action,
                                   describe=describe_bill, build_form=build_form, fill_form=fill_form,
@@ -858,7 +877,7 @@ def build_create_bill_page(section_frame, page_hooks):
                 new_bill = generate_bill(member_id, category, "FEE")
             else:
                 new_bill = generate_bill(member_id, category, reference_id)
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             show_problem(error)
             return
         messagebox.showinfo("Bill created", (f"Bill {new_bill.get_bill_id()} created: RM {new_bill.get_total():.2f} "
@@ -916,6 +935,8 @@ def build_revenue_page(section_frame, page_hooks):
                      bg=common.PANEL_BG).grid(row=0, column=0)
             count_label.config(text="")
             return
+        # Bills are saved as YYYY-MM-DD, so 2027-1-5 must be tidied to match.
+        date_text = common.normalize_date(date_text)
         category_totals, grand_total, bill_count, paid_count, unpaid_count = daily_revenue_summary(date_text)
 
         tk.Label(card, text=f"Revenue on {date_text}", font=common.HEADING_FONT, bg=common.PANEL_BG,

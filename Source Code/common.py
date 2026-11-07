@@ -29,6 +29,18 @@ CLASSES_FILE = os.path.join(DATA_FOLDER, "classes.txt")
 BILLS_FILE = os.path.join(DATA_FOLDER, "bills.txt")
 
 FILE_ENCODING = "utf-8"
+# Reading uses "utf-8-sig": it is the same as UTF-8 but silently skips the
+# invisible BOM character some editors put at the start of a file, which
+# would otherwise make the first record's ID unreadable.
+READ_ENCODING = "utf-8-sig"
+
+# Highest ID number ever handed out per prefix (e.g. CLS|7), so an ID is
+# never reused after its record is deleted.
+ID_COUNTER_FILE = os.path.join(DATA_FOLDER, "id_counters.txt")
+
+# Recursive totals are used for the rubric, but Python stops recursion at
+# about 1000 levels, so above this many items a plain loop is used.
+RECURSION_SAFE_LIMIT = 500
 
 # ---------------------------------------------------------------------------
 # DOMAIN CONSTANTS
@@ -485,8 +497,9 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
 
     card = make_card(page_frame)
     card.pack(side="right", fill="y", padx=(12, 0))
-    details_label = tk.Label(card, text="", font=LABEL_FONT, bg=PANEL_BG, justify="left",
-                             anchor="w", width=32)
+    # Monospace so the "Label:  value" lines from details_text line up.
+    details_label = tk.Label(card, text="", font=MONO_FONT, bg=PANEL_BG, justify="left",
+                             anchor="w", width=DETAIL_LABEL_WIDTH + DETAIL_VALUE_WIDTH)
     details_label.pack(side="top", anchor="w")
     form_frame = tk.Frame(card, bg=PANEL_BG)
     if build_form is not None:
@@ -549,7 +562,7 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
             return
         try:
             message = action_function(row_id)
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
             return
         messagebox.showinfo(result_title, message)
@@ -699,7 +712,7 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
             return
         try:
             message = delete_action(record_id)
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
             return
         messagebox.showinfo("Deleted", message)
@@ -752,7 +765,7 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         """Add a new record (blank form) or save the one being edited."""
         try:
             message = save_action(page_state["editing_id"])
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
             return
         messagebox.showinfo("Saved", message)
@@ -808,6 +821,10 @@ def parse_decimal(text, field_name, minimum, maximum):
     # nan is the only value that is not equal to itself.
     if value != value or value == float("inf") or value == float("-inf"):
         raise ValueError(f"Please enter a valid number for {field_name}.")
+    # Every decimal in this program is money or a percentage, saved with 2
+    # decimals - round first, so 0.004 becomes 0.00 and fails a 0.01 minimum
+    # instead of passing and then being saved as 0.00.
+    value = round(value, 2)
     if value < minimum or value > maximum:
         raise ValueError(f"{field_name} must be between {minimum:g} and {maximum:g}.")
     return value
@@ -823,6 +840,31 @@ def parse_whole_number(text, field_name, minimum, maximum):
     if value < minimum or value > maximum:
         raise ValueError(f"{field_name} must be between {minimum} and {maximum}.")
     return value
+
+
+def fit_text(text, width):
+    """Return text cut to at most width characters, ending in ... when it
+    had to be shortened (so long names don't run into the next column)."""
+    if len(text) <= width:
+        return text
+    return text[:width - 1] + "\u2026"
+
+
+DETAIL_LABEL_WIDTH = 12
+DETAIL_VALUE_WIDTH = 22
+
+
+def details_text(label_value_pairs):
+    """Turn [("Class ID", "CLS001"), ("Sport", "Tennis"), ...] into neat
+    lines like 'Class ID:   CLS001', one per pair, for the details panel.
+    A label of "" makes a blank spacer line."""
+    lines = []
+    for label_text, value in label_value_pairs:
+        if label_text == "":
+            lines.append("")
+        else:
+            lines.append(f"{label_text + ':':<{DETAIL_LABEL_WIDTH}}{fit_text(str(value), DETAIL_VALUE_WIDTH)}")
+    return "\n".join(lines)
 
 
 def is_finite_number(value):
@@ -994,7 +1036,7 @@ def read_lines(file_path):
     Missing files are treated as empty (auto-recreated by ensure_data_files_exist)."""
     lines = []
     try:
-        file_handle = open(file_path, "r", encoding=FILE_ENCODING)
+        file_handle = open(file_path, "r", encoding=READ_ENCODING)
     except FileNotFoundError:
         ensure_data_files_exist()
         return read_lines(file_path)
@@ -1007,29 +1049,87 @@ def read_lines(file_path):
     return lines
 
 
+def file_error_message(file_path, error):
+    """Plain message shown when a data file cannot be saved."""
+    return (f"Could not save {os.path.basename(file_path)} ({error.strerror or error}). "
+            "If the file is open in another program, close it and try again.")
+
+
 def write_lines(file_path, lines):
-    """Overwrite a text file with the given list of lines (one per line)."""
+    """Overwrite a text file with the given list of lines (one per line).
+    Raises OSError with a plain message if the file cannot be opened. The
+    file is only closed if it was actually opened."""
     try:
         file_handle = open(file_path, "w", encoding=FILE_ENCODING, newline="\n")
     except OSError as error:
-        raise OSError(f"Could not write to {file_path}: {error}")
+        raise OSError(file_error_message(file_path, error))
     else:
-        for line in lines:
-            file_handle.write(line + "\n")
-    finally:
-        file_handle.close()
+        try:
+            for line in lines:
+                file_handle.write(line + "\n")
+        finally:
+            file_handle.close()
 
 
 def append_line(file_path, line):
-    """Append a single record line to a text file."""
+    """Append a single record line to a text file, then remember its ID
+    as used (so it is never handed out again, even after a delete)."""
     try:
         file_handle = open(file_path, "a", encoding=FILE_ENCODING, newline="\n")
     except OSError as error:
-        raise OSError(f"Could not append to {file_path}: {error}")
+        raise OSError(file_error_message(file_path, error))
     else:
-        file_handle.write(line + "\n")
-    finally:
-        file_handle.close()
+        try:
+            file_handle.write(line + "\n")
+        finally:
+            file_handle.close()
+    note_used_id(line.split("|")[0])
+
+
+def rewrite_records(file_path, record_lines, line_parser):
+    """Overwrite a data file with record_lines, but keep every line that
+    could not be read (line_parser returns None for it) at the end,
+    unchanged - so a damaged or hand-edited line is never silently
+    erased when another record is updated or deleted."""
+    unreadable_lines = []
+    for line in read_lines(file_path):
+        if line_parser(line) is None:
+            unreadable_lines.append(line)
+    write_lines(file_path, record_lines + unreadable_lines)
+
+
+def read_id_counters():
+    """Return a dictionary of prefix -> highest ID number ever used. The
+    counter file is optional, so it is checked before reading."""
+    counters = {}
+    if not os.path.isfile(ID_COUNTER_FILE):
+        return counters
+    for line in read_lines(ID_COUNTER_FILE):
+        fields = line.split("|")
+        if len(fields) == 2 and fields[1].isdigit():
+            counters[fields[0]] = int(fields[1])
+    return counters
+
+
+def note_used_id(record_id):
+    """Record that record_id (e.g. CLS007) has been used, if its number is
+    higher than any used before for that prefix."""
+    prefix = ""
+    for character in record_id:
+        if character.isalpha():
+            prefix += character
+        else:
+            break
+    number_text = record_id[len(prefix):]
+    if prefix == "" or not number_text.isdigit():
+        return
+    counters = read_id_counters()
+    if int(number_text) > counters.get(prefix, 0):
+        counters[prefix] = int(number_text)
+        counter_lines = []
+        for counter_prefix in counters:
+            counter_lines.append(f"{counter_prefix}|{counters[counter_prefix]}")
+        write_lines(ID_COUNTER_FILE, counter_lines)
 
 
 def split_fields(line, expected_field_count):
@@ -1050,9 +1150,10 @@ def contains_forbidden_character(text):
 
 
 def generate_id(file_path, prefix):
-    """Generate the next ID (e.g. MEM005) for a data file. Reads the file,
-    finds the highest numeric suffix on lines starting with prefix, and
-    returns prefix + next number zero-padded to 3 digits."""
+    """Generate the next ID (e.g. MEM005) for a data file: one more than the
+    highest number in the file OR the highest ever used (id_counters.txt),
+    whichever is bigger. So deleting the newest record never frees its ID
+    for a different record (an old bill could otherwise point at it)."""
     highest_number = 0
     for line in read_lines(file_path):
         fields = line.split("|")
@@ -1063,6 +1164,7 @@ def generate_id(file_path, prefix):
                 number_value = int(number_text)
                 if number_value > highest_number:
                     highest_number = number_value
+    highest_number = max(highest_number, read_id_counters().get(prefix, 0))
     next_number = highest_number + 1
     return prefix + str(next_number).zfill(3)
 
@@ -1092,14 +1194,18 @@ def is_valid_name(name_text):
     return True
 
 
+# Malay name connectors stay lower-case, like a/l and s/o.
+LOWERCASE_NAME_WORDS = {"bin", "binti", "bt", "bte"}
+
+
 def format_name(name_text):
     """Tidy a name's capitals word by word: 'ch'ng wei' -> "Ch'ng Wei".
-    Words containing '/' (a/l, s/o) are kept lower-case, and extra spaces
+    Words containing '/' (a/l, s/o) and bin/binti are kept lower-case, and extra spaces
     are removed. str.title() is not used because it would turn Ch'ng
     into Ch'Ng."""
     tidy_words = []
     for word in name_text.split():
-        if "/" in word:
+        if "/" in word or word.lower() in LOWERCASE_NAME_WORDS:
             tidy_words.append(word.lower())
         else:
             tidy_words.append(word[0].upper() + word[1:].lower())
@@ -1136,6 +1242,14 @@ def parse_date(date_text):
     except ValueError:
         raise ValueError("Date must be in YYYY-MM-DD format, e.g. 2026-12-01")
     return parsed
+
+
+def normalize_date(date_text):
+    """Return date_text written the standard way, YYYY-MM-DD (so 2027-1-5
+    becomes 2027-01-05). Raises ValueError if it is not a real date.
+    Saving every date in one form means comparisons and searches on the
+    raw text always match."""
+    return parse_date(date_text).strftime("%Y-%m-%d")
 
 
 def is_valid_hour(hour_value):

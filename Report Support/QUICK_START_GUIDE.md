@@ -43,6 +43,7 @@ always ask first.
   (and the next one for 2 hours), pick a member, **Book**.
 - **Membership > Register:** name, phone, click a card, **Register**.
 - **Coaching > Enrol Member:** click a class, pick a member, **Enrol**.
+  (For a **Private** class, pick the member right on Manage Classes.)
 - **Billing > Create Bill**, then **Pay Bill**.
 
 ## Sample IDs already in the system

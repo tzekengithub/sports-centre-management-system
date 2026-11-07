@@ -42,8 +42,22 @@ that read/write the data files and `raise ValueError` on bad input) and a
   missing `.txt` files, filled with sample rows generated relative to
   today's date (`build_sample_rows()`).
 - `read_lines` / `write_lines` / `append_line` - read/overwrite/append a
-  text file, always using UTF-8.
-- `generate_id(file_path, prefix)` - next ID after the highest existing one.
+  text file in UTF-8. Reading uses `utf-8-sig`, which skips the invisible
+  BOM some editors (Notepad) add, so the first record stays readable. If
+  a file can't be opened they raise `OSError` with a plain message
+  (`file_error_message`), and they only close a file that was opened.
+- `rewrite_records(file_path, record_lines, line_parser)` - overwrites a
+  data file with the updated records, then adds back every line the
+  parser could not read, so a damaged line is never silently lost.
+- `generate_id(file_path, prefix)` - next ID after the highest one in
+  the file or the highest ever used (`read_id_counters` /
+  `note_used_id`, saved in `data/id_counters.txt`), so a deleted
+  record's ID is never handed out again.
+- `normalize_date(text)` - rewrites a date as `YYYY-MM-DD` (2027-1-5 ->
+  2027-01-05) before saving, so text comparisons always match.
+- `fit_text(text, width)` - shortens long text for list columns, ending
+  in "…". `details_text(pairs)` - builds the aligned "Label:  value"
+  lines shown in every details panel.
 - `split_fields(line, expected_field_count)` - splits a `|` line, or `None`
   if malformed, so loaders skip corrupted lines instead of crashing.
 - `contains_forbidden_character(text)` - True if `text` contains `|` or `;`.
@@ -125,12 +139,24 @@ Logic:
   **upcoming** classes are moved to the new sport too (past classes keep
   the sport that was actually taught). Returns how many were changed.
 - `count_classes_for_coach` / `delete_coach` - a coach cannot be removed
-  while any class (past or upcoming) still points to them; otherwise the
-  freed ID could be reused by a new coach who would "inherit" the old
-  classes, hours and commission.
+  while any class (past or upcoming) still points to them, so no class
+  is left without its coach.
+- `coach_phone_in_use(phone, ignore_coach_id)` - two coaches can't share
+  a phone number (checked when adding and when updating).
 - `validate_class_details(...)` - shared checks for scheduling and
-  updating: real date not in the past, duration 1-4 hours, inside opening
-  hours, Private = exactly 1 person, Group = 1-30, fee RM 0.01-1000.
+  updating: real date not in the past (and, for today, a start hour that
+  hasn't begun), duration 1-4 hours, inside opening hours, Private =
+  exactly 1 person, Group = 1-30, fee RM 0.01-1000 (rounded to 2
+  decimals first). `schedule_class`/`update_class` save the date through
+  `normalize_date`. `enrol_participant` refuses a class that has
+  already taken place.
+- Manage Classes: when **Private** is picked while scheduling, a Member
+  row appears; the chosen member is enrolled straight after the class
+  is saved (a private session is for one named person). Classes can be
+  searched by sport; Enrol Member by sport or coach name; Remove Member
+  by member name. Hours & Commission shows the coach's name first and
+  has a coach-name search. `total_commission` uses the recursive total
+  up to 500 classes and a loop above that.
 - `schedule_class`, `update_class`, `cancel_class`, `find_class_by_id`,
   `coach_has_time_clash`, `search_classes` (`match`).
 - `load_member_names()` - dict of member ID -> name from members.txt.

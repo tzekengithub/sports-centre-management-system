@@ -510,6 +510,41 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   in light (80 clicks) and dark (75 clicks) with no exception. The screen
   was off, so no screenshots - please look at dark mode once by eye.
 
+## Entry 22 - Tester's fixes T1-T13
+- **Asked:** A tester's list: unique coach phone (T1); searches by sport,
+  coach name and member name, coach names on Hours & Commission, "Class
+  ID" style headers (T1.1-T1.3); standard dates (T2); no start hour
+  that has already passed (T3); safe file writing (T4); keep damaged
+  lines (T5); never reuse IDs (T6); round fee before the 0.01 check
+  (T7); recursion fallback (T8); read files with a BOM (T9); no enrolling
+  in past classes (T10); private classes can't be enrolled (T11);
+  labelled details panels (T12); truncate long names with "…" (T13).
+- **Produced:** `common.py` gained `READ_ENCODING` (utf-8-sig),
+  `file_error_message`, safer `write_lines`/`append_line`,
+  `rewrite_records`, ID counters (`data/id_counters.txt`,
+  `read_id_counters`, `note_used_id`), `normalize_date`, rounding in
+  `parse_decimal`, `fit_text`, `details_text` and
+  `RECURSION_SAFE_LIMIT`. Every module now rewrites files through
+  `rewrite_records`, catches `OSError` in its GUI handlers, uses named
+  ID headers, cut names and labelled details. Coaching: phone check,
+  today/past checks, sport/coach/member searches, coach names and a
+  search on Hours & Commission, and a Member box for Private classes.
+  `count_members`, `total_bills` and `total_commission` wrap the
+  recursive totals.
+- **T11 cause:** enrolling into a private class worked; the sample
+  private class CLS002 was already full (1/1), so it was hidden from
+  the Enrol list. Following the tester's suggestion, the member is now
+  picked when the private class is scheduled.
+- **Also:** "bin", "binti", "bt", "bte" now stay lower-case in names
+  (Malay names). MEM-11 changed: IDs are no longer reused after a delete.
+- **Caught and fixed while testing:** a local variable named
+  `total_commission` hid the new function of the same name and broke the
+  Hours & Commission page ("'float' object is not callable"); renamed
+  it `commission_sum`.
+- **Verify:** T1-01 to T-ALL in `TEST_CASES.md`; crash run 77 clicks,
+  no exception; docstring, match/while, import and undefined-name
+  checks pass. The screen was off, so no screenshots.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

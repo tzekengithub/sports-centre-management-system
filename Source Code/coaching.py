@@ -125,8 +125,21 @@ def find_coach_by_id(coach_list, coach_id):
     return None
 
 
+def coach_phone_in_use(phone, ignore_coach_id=None):
+    """Return the ID of the coach already using phone (ignoring
+    ignore_coach_id, the coach being edited), or None if it is free."""
+    for coach in load_all_coaches():
+        if coach.get_phone() == phone.strip() and coach.get_coach_id() != ignore_coach_id:
+            return coach.get_coach_id()
+    return None
+
+
 def register_coach(name, phone, sport, hourly_rate, commission_pct):
-    """Validate input, build a new Coach, append it to the file, return it."""
+    """Validate input, build a new Coach, append it to the file, return it.
+    A phone number can only belong to one coach."""
+    owner_id = coach_phone_in_use(phone)
+    if owner_id is not None:
+        raise ValueError(f"This phone number is already used by coach {owner_id}.")
     new_id = common.generate_id(common.COACHES_FILE, "CCH")
     new_coach = Coach(new_id, name, phone, sport, hourly_rate, commission_pct)
     common.append_line(common.COACHES_FILE, new_coach.to_line())
@@ -162,6 +175,9 @@ def update_coach(coach_id, new_name, new_phone, new_sport, new_rate, new_commiss
     if coach_record is None:
         raise ValueError(f"No coach found with ID {coach_id}.")
     old_sport = coach_record.get_sport()
+    owner_id = coach_phone_in_use(new_phone, ignore_coach_id=coach_id)
+    if owner_id is not None:
+        raise ValueError(f"This phone number is already used by coach {owner_id}.")
 
     coach_record.set_name(new_name)
     coach_record.set_phone(new_phone)
@@ -172,7 +188,7 @@ def update_coach(coach_id, new_name, new_phone, new_sport, new_rate, new_commiss
     updated_lines = []
     for coach in coach_list:
         updated_lines.append(coach.to_line())
-    common.write_lines(common.COACHES_FILE, updated_lines)
+    common.rewrite_records(common.COACHES_FILE, updated_lines, line_to_coach)
 
     changed_class_count = 0
     if new_sport != old_sport:
@@ -184,7 +200,7 @@ def update_coach(coach_id, new_name, new_phone, new_sport, new_rate, new_commiss
                 sports_class.sport = new_sport
                 changed_class_count += 1
             class_lines.append(sports_class.to_line())
-        common.write_lines(common.CLASSES_FILE, class_lines)
+        common.rewrite_records(common.CLASSES_FILE, class_lines, line_to_class)
     return changed_class_count
 
 
@@ -217,7 +233,7 @@ def delete_coach(coach_id):
             remaining_lines.append(coach.to_line())
     if not coach_found:
         raise ValueError(f"No coach found with ID {coach_id}.")
-    common.write_lines(common.COACHES_FILE, remaining_lines)
+    common.rewrite_records(common.COACHES_FILE, remaining_lines, line_to_coach)
 
 
 # ---------------------------------------------------------------------------
@@ -313,13 +329,17 @@ def coach_has_time_clash(class_list, coach_id, date_text, start_hour, duration_h
 
 def validate_class_details(class_type, date_text, start_hour, duration_hrs, max_pax, fee_per_pax):
     """Check the details shared by scheduling and updating a class.
-    Raises ValueError with a plain message for the first problem found."""
+    date_text must already be tidied with common.normalize_date and the
+    fee already rounded to 2 decimals. Raises ValueError with a plain
+    message for the first problem found."""
     if class_type not in CLASS_TYPES:
         raise ValueError("Class type must be Private or Group.")
     if not common.is_valid_date(date_text):
         raise ValueError("Class date must be a real date in YYYY-MM-DD form.")
     if date_text < common.today_string():
         raise ValueError("Class date cannot be in the past.")
+    if date_text == common.today_string() and start_hour <= common.current_hour():
+        raise ValueError(f"{start_hour:02d}:00 has already started today. Pick a later start time.")
     if duration_hrs < 1 or duration_hrs > MAX_CLASS_DURATION:
         raise ValueError(f"Duration must be between 1 and {MAX_CLASS_DURATION} hours.")
     if not common.is_valid_hour(start_hour) or not common.is_valid_hour(start_hour + duration_hrs - 1):
@@ -329,7 +349,7 @@ def validate_class_details(class_type, date_text, start_hour, duration_hrs, max_
         raise ValueError("A private session is for exactly 1 person.")
     if max_pax < 1 or max_pax > MAX_GROUP_SIZE:
         raise ValueError(f"Maximum people must be between 1 and {MAX_GROUP_SIZE}.")
-    if not (0 < fee_per_pax <= MAX_CLASS_FEE):
+    if not (0.01 <= fee_per_pax <= MAX_CLASS_FEE):
         raise ValueError(f"Fee per person must be between RM 0.01 and RM {MAX_CLASS_FEE:g}.")
 
 
@@ -339,6 +359,11 @@ def schedule_class(coach_id, class_type, date_text, start_hour, duration_hrs, ma
     coach_record = find_coach_by_id(load_all_coaches(), coach_id)
     if coach_record is None:
         raise ValueError(f"No coach found with ID {coach_id}.")
+    # Save the date in one standard form (2027-1-5 -> 2027-01-05) so clash
+    # checks and searches, which compare the text, always match; round the
+    # fee before checking it, because that is the value that gets saved.
+    date_text = common.normalize_date(date_text)
+    fee_per_pax = round(fee_per_pax, 2)
     validate_class_details(class_type, date_text, start_hour, duration_hrs, max_pax, fee_per_pax)
 
     class_list = load_all_classes()
@@ -361,6 +386,8 @@ def update_class(class_id, new_date_text, new_start_hour, new_duration_hrs, new_
     if target_class is None:
         raise ValueError(f"No class found with ID {class_id}.")
 
+    new_date_text = common.normalize_date(new_date_text)
+    new_fee_per_pax = round(new_fee_per_pax, 2)
     validate_class_details(target_class.class_type, new_date_text, new_start_hour,
                            new_duration_hrs, new_max_pax, new_fee_per_pax)
     if new_max_pax < len(target_class.get_participant_list()):
@@ -378,7 +405,7 @@ def update_class(class_id, new_date_text, new_start_hour, new_duration_hrs, new_
     updated_lines = []
     for sports_class in class_list:
         updated_lines.append(sports_class.to_line())
-    common.write_lines(common.CLASSES_FILE, updated_lines)
+    common.rewrite_records(common.CLASSES_FILE, updated_lines, line_to_class)
 
 
 def load_member_names():
@@ -402,6 +429,8 @@ def enrol_participant(class_id, member_id):
     if target_class is None:
         raise ValueError(f"No class found with ID {class_id}.")
 
+    if target_class.date_text < common.today_string():
+        raise ValueError("This class has already taken place.")
     participant_set = set(target_class.get_participant_list())
     if member_id in participant_set:
         raise ValueError("This member is already enrolled.")
@@ -414,7 +443,7 @@ def enrol_participant(class_id, member_id):
     updated_lines = []
     for sports_class in class_list:
         updated_lines.append(sports_class.to_line())
-    common.write_lines(common.CLASSES_FILE, updated_lines)
+    common.rewrite_records(common.CLASSES_FILE, updated_lines, line_to_class)
 
 
 def remove_participant(class_id, member_id):
@@ -432,7 +461,7 @@ def remove_participant(class_id, member_id):
     updated_lines = []
     for sports_class in class_list:
         updated_lines.append(sports_class.to_line())
-    common.write_lines(common.CLASSES_FILE, updated_lines)
+    common.rewrite_records(common.CLASSES_FILE, updated_lines, line_to_class)
 
 
 def search_classes(class_list, search_field, search_text):
@@ -448,7 +477,7 @@ def search_classes(class_list, search_field, search_text):
                 if sports_class.date_text == search_text.strip():
                     results.append(sports_class)
             case "sport":
-                if sports_class.sport.lower() == search_text_lower:
+                if search_text_lower in sports_class.sport.lower():
                     results.append(sports_class)
             case "type":
                 if sports_class.class_type.lower() == search_text_lower:
@@ -468,7 +497,7 @@ def cancel_class(class_id):
             remaining_lines.append(sports_class.to_line())
     if not class_found:
         raise ValueError(f"No class found with ID {class_id}.")
-    common.write_lines(common.CLASSES_FILE, remaining_lines)
+    common.rewrite_records(common.CLASSES_FILE, remaining_lines, line_to_class)
 
 
 def classes_in_month(class_list, month_text):
@@ -502,6 +531,18 @@ def calculate_commission(sports_class, commission_pct):
     return sports_class.fee_per_pax * participant_count * commission_pct / 100.0
 
 
+def total_commission(class_list, coach_commission_pct):
+    """Total commission for class_list. Uses the recursive version (rubric)
+    for normal sizes, and a plain loop above common.RECURSION_SAFE_LIMIT,
+    where recursion would hit Python's limit and crash."""
+    if len(class_list) <= common.RECURSION_SAFE_LIMIT:
+        return total_commission_recursive(class_list, coach_commission_pct)
+    commission_sum = 0.0
+    for sports_class in class_list:
+        commission_sum += calculate_commission(sports_class, coach_commission_pct)
+    return commission_sum
+
+
 def total_commission_recursive(class_list, coach_commission_pct, index=0):
     """Recursively total commission across class_list for a given commission
     percent, starting at index. Demonstrates recursion over a list."""
@@ -525,18 +566,21 @@ COACHING_ACTIONS = [
      "Blank form = add a new coach. Click a coach to update them, then Save Changes. "
      "Click Delete beside a coach to remove them."),
     ("Manage Classes", "Schedule, update or delete classes",
-     "Blank form = schedule a new class (a private session is for 1 person). Click a class to "
+     "Blank form = schedule a new class (for a private session, pick its member). Click a class to "
      "update it, then Save Changes. Click Delete beside a class to cancel it."),
     ("Enrol Member", "Add a member to a class",
-     "Click an upcoming class, pick the member on the right, then click Enrol."),
+     "Click an upcoming class, pick the member on the right, then click Enrol. Full classes "
+     "(e.g. a private session that already has its 1 person) are not listed."),
     ("Remove Member", "Take a member out of a class",
      "Each row is one member in one class. Click the row, then click Remove."),
     ("Hours & Commission", "Coach hours and earnings",
-     "Hours and commission per coach. Commission = fee per person x people enrolled x the coach's %."),
+     "Hours and commission per coach (search by coach name). "
+     "Commission = fee per person x people enrolled x the coach's %."),
 ]
 
-COACH_LIST_HEADER = f"{'ID':<8}{'Name':<20}{'Sport':<11}{'RM/hour':>8}{'Comm %':>8}"
-CLASS_LIST_HEADER = f"{'ID':<7}{'Date':<11}{'Time':<12}{'Sport':<10}{'Type':<8}{'People':>7}"
+COACH_LIST_HEADER = f"{'Coach ID':<9}{'Name':<20}{'Sport':<11}{'RM/hour':>8}{'Comm %':>8}"
+CLASS_LIST_HEADER = f"{'Class ID':<9}{'Date':<11}{'Time':<12}{'Sport':<10}{'Type':<8}{'People':>7}"
+NAME_COLUMN_WIDTH = 19
 
 HOUR_CHOICES = []
 for choice_hour in range(common.OPENING_HOUR, common.CLOSING_HOUR):
@@ -570,9 +614,10 @@ def build_coaching_tab(parent):
     build_manage_classes_page(page_frames["Manage Classes"], page_hooks)
     page_hooks["Enrol Member"] = build_enrol_page(page_frames["Enrol Member"])
     page_hooks["Remove Member"] = common.build_pick_page(
-        page_frames["Remove Member"], f"{'Class':<7}{'Date':<11}{'Sport':<10}{'Member':<8}{'Name':<20}",
+        page_frames["Remove Member"], f"{'Class ID':<9}{'Date':<11}{'Sport':<10}{'Member ID':<10}{'Name':<20}",
         enrolment_rows, "Remove", remove_member_action, describe=describe_enrolment,
-        confirm_text=remove_member_question, danger=True, empty_text="Nobody is enrolled in an upcoming class.")
+        confirm_text=remove_member_question, danger=True, search_label="Member name",
+        empty_text="Nobody is enrolled in an upcoming class.")
     build_report_page(page_frames["Hours & Commission"], page_hooks)
     return window
 
@@ -586,7 +631,8 @@ def coach_rows(search_text):
         coach_list = search_coaches(coach_list, "name", search_text)
     rows = []
     for coach in coach_list:
-        rows.append((coach.get_coach_id(), (f"{coach.get_coach_id():<8}{coach.get_name()[:19]:<20}"
+        rows.append((coach.get_coach_id(), (f"{coach.get_coach_id():<9}"
+                                            f"{common.fit_text(coach.get_name(), NAME_COLUMN_WIDTH):<20}"
                                             f"{coach.get_sport():<11}{coach.get_hourly_rate():>8.2f}"
                                             f"{coach.get_commission_pct():>8.0f}")))
     return rows
@@ -607,7 +653,7 @@ def class_rows(only_upcoming, only_with_space):
     rows = []
     for date_text, start_hour, class_id, sports_class in sort_rows:
         pax_text = f"{len(sports_class.get_participant_list())}/{sports_class.max_pax}"
-        rows.append((class_id, (f"{class_id:<7}{date_text:<11}{sports_class.get_time_text():<12}"
+        rows.append((class_id, (f"{class_id:<9}{date_text:<11}{sports_class.get_time_text():<12}"
                                 f"{sports_class.sport:<10}{sports_class.class_type:<8}{pax_text:>7}")))
     return rows
 
@@ -618,15 +664,21 @@ def describe_class(class_id):
     if sports_class is None:
         return "This class no longer exists."
     coach = find_coach_by_id(load_all_coaches(), sports_class.coach_id)
-    coach_name = sports_class.coach_id
+    coach_name = "(coach removed)"
     if coach is not None:
-        coach_name = f"{sports_class.coach_id} {coach.get_name()}"
-    return (f"{sports_class.class_id}\n\n{sports_class.sport} {sports_class.class_type}\n"
-            f"{sports_class.date_text}  {sports_class.get_time_text()} "
-            f"({sports_class.duration_hrs} hour(s))\n"
-            f"Coach: {coach_name}\n"
-            f"Enrolled: {len(sports_class.get_participant_list())} of {sports_class.max_pax} people\n"
-            f"Fee: RM {sports_class.fee_per_pax:.2f} per person")
+        coach_name = coach.get_name()
+    return common.details_text([
+        ("Class ID", sports_class.class_id),
+        ("Sport", sports_class.sport),
+        ("Type", sports_class.class_type),
+        ("Date", sports_class.date_text),
+        ("Time", sports_class.get_time_text()),
+        ("Duration", f"{sports_class.duration_hrs} hour(s)"),
+        ("Coach ID", sports_class.coach_id),
+        ("Coach", coach_name),
+        ("Enrolled", f"{len(sports_class.get_participant_list())} of {sports_class.max_pax} people"),
+        ("Fee", f"RM {sports_class.fee_per_pax:.2f} per person"),
+    ])
 
 
 def enrolment_rows(search_text):
@@ -634,17 +686,21 @@ def enrolment_rows(search_text):
     'CLASS_ID;MEMBER_ID' so Remove knows both."""
     member_names = load_member_names()
     today = common.today_string()
+    search_lower = search_text.strip().lower()
     sort_rows = []
     for sports_class in load_all_classes():
         if sports_class.date_text < today:
             continue
         for member_id in sports_class.get_participant_list():
+            if search_lower not in member_names.get(member_id, "").lower():
+                continue
             sort_rows.append((sports_class.date_text, sports_class.class_id, member_id, sports_class.sport))
     sort_rows.sort()
     rows = []
     for date_text, class_id, member_id, sport in sort_rows:
         rows.append((class_id + ";" + member_id,
-                     f"{class_id:<7}{date_text:<11}{sport:<10}{member_id:<8}{member_names.get(member_id, '?')[:19]:<20}"))
+                     f"{class_id:<9}{date_text:<11}{sport:<10}{member_id:<10}"
+                     f"{common.fit_text(member_names.get(member_id, '?'), NAME_COLUMN_WIDTH):<20}"))
     return rows
 
 
@@ -652,7 +708,8 @@ def describe_enrolment(row_id):
     """Details for one class/member pair."""
     class_id, member_id = row_id.split(";")
     member_name = load_member_names().get(member_id, "(member removed)")
-    return f"{member_id} {member_name}\n\nis enrolled in\n\n" + describe_class(class_id)
+    return (common.details_text([("Member ID", member_id), ("Name", member_name), ("", "")])
+            + "\n" + describe_class(class_id))
 
 
 def remove_member_action(row_id):
@@ -808,18 +865,33 @@ def build_manage_classes_page(page_frame, page_hooks):
     coach_choice_ids = {}
     type_buttons = []
 
+    page_state = {"adding": True}
+    member_choice_ids = {}
+
+    def show_member_row(visible):
+        """Show or hide the private-session Member row."""
+        if visible:
+            fields["member_label"].grid(row=7, column=0, sticky="w", padx=(0, 10), pady=4)
+            fields["member_menu"].grid(row=7, column=1, sticky="w", pady=4)
+        else:
+            fields["member_label"].grid_remove()
+            fields["member_menu"].grid_remove()
+
     def apply_class_type():
         """A private session is always for 1 person, so fix Max people at
-        1 and lock it; a group class lets the user type the size."""
+        1, lock it and (when adding) ask which member it is for; a group
+        class lets the user type the size."""
         fields["max_pax"].config(state="normal")
         match fields["type"].get():
             case "Private":
                 fields["max_pax"].delete(0, tk.END)
                 fields["max_pax"].insert(0, "1")
                 fields["max_pax"].config(state="disabled")
+                show_member_row(page_state["adding"])
             case "Group":
                 if fields["max_pax"].get().strip() == "1":
                     fields["max_pax"].delete(0, tk.END)
+                show_member_row(False)
 
     def build_form(form_frame):
         """Add coach, type and the date/time/size/fee fields."""
@@ -843,6 +915,15 @@ def build_manage_classes_page(page_frame, page_hooks):
         common.add_form_row(form_frame, 1, "Type", type_row,
                             tip="Private session or group class. Can't be changed after scheduling.")
         fields.update(add_class_time_fields(form_frame, 2))
+        # Only shown when scheduling a NEW private session: the one member
+        # it is for is chosen here and enrolled straight away.
+        fields["member"] = tk.StringVar(value="")
+        fields["member_label"] = tk.Label(form_frame, text="Member", font=common.LABEL_FONT,
+                                          bg=common.PANEL_BG, anchor="w")
+        fields["member_menu"] = common.make_option_menu(form_frame, fields["member"], [], width=24,
+                                                        tip="The member this private session is for. "
+                                                            "They are enrolled as soon as you schedule it.")
+        common.add_tooltip(fields["member_label"], "The member this private session is for.")
 
     def set_locked(locked):
         """Coach and type can't be changed on an existing class."""
@@ -862,6 +943,16 @@ def build_manage_classes_page(page_frame, page_hooks):
             coach_choice_ids[coach_choice_text(coach)] = coach.get_coach_id()
             choices.append(coach_choice_text(coach))
         common.set_option_menu_choices(fields["coach_menu"], fields["coach"], choices)
+        member_choice_ids.clear()
+        member_choices = []
+        member_names = load_member_names()
+        for member_id in member_names:
+            choice_text = f"{member_id} {member_names[member_id]}"
+            member_choice_ids[choice_text] = member_id
+            member_choices.append(choice_text)
+        common.set_option_menu_choices(fields["member_menu"], fields["member"], member_choices)
+        page_state["adding"] = True
+        show_member_row(False)
         set_locked(False)
         fields["type"].set("Group")
         fields["max_pax"].config(state="normal")
@@ -876,6 +967,8 @@ def build_manage_classes_page(page_frame, page_hooks):
         sports_class = find_class_by_id(load_all_classes(), class_id)
         if sports_class is None:
             return
+        page_state["adding"] = False
+        show_member_row(False)
         for choice_text in coach_choice_ids:
             if coach_choice_ids[choice_text] == sports_class.coach_id:
                 fields["coach"].set(choice_text)
@@ -898,10 +991,18 @@ def build_manage_classes_page(page_frame, page_hooks):
         if class_id is None:
             if fields["coach"].get() not in coach_choice_ids:
                 raise ValueError("Please add a coach first (Manage Coaches).")
+            is_private = fields["type"].get() == "Private"
+            if is_private and fields["member"].get() not in member_choice_ids:
+                raise ValueError("Pick the member this private session is for.")
             new_class = schedule_class(coach_choice_ids[fields["coach"].get()], fields["type"].get(), date_text,
                                        start_hour, duration_hours, max_pax, fee)
-            return (f"Class {new_class.class_id} scheduled: {new_class.sport} {new_class.class_type}, "
-                    f"{new_class.date_text} {new_class.get_time_text()}.")
+            message = (f"Class {new_class.class_id} scheduled: {new_class.sport} {new_class.class_type}, "
+                       f"{new_class.date_text} {new_class.get_time_text()}.")
+            if is_private:
+                member_id = member_choice_ids[fields["member"].get()]
+                enrol_participant(new_class.class_id, member_id)
+                message += f"\n{member_id} is enrolled in it."
+            return message
         update_class(class_id, date_text, start_hour, duration_hours, max_pax, fee)
         return f"Class {class_id} saved."
 
@@ -915,12 +1016,12 @@ def build_manage_classes_page(page_frame, page_hooks):
         return f"Delete class {class_id}? This cannot be undone."
 
     def load_rows(search_text):
-        """Every class, soonest first, or one coach's classes."""
+        """Every class, soonest first, or only those of one sport."""
         rows = class_rows(False, False)
         if search_text == "":
             return rows
         coach_class_ids = set()
-        for sports_class in search_classes(load_all_classes(), "coach", search_text):
+        for sports_class in search_classes(load_all_classes(), "sport", search_text):
             coach_class_ids.add(sports_class.class_id)
         matching_rows = []
         for class_id, row_text in rows:
@@ -930,7 +1031,7 @@ def build_manage_classes_page(page_frame, page_hooks):
 
     page_hooks["Manage Classes"] = common.build_manage_page(
         page_frame, CLASS_LIST_HEADER, load_rows, "class", build_form, clear_form, fill_form,
-        save_action, delete_action, delete_question, add_label="Schedule Class", search_label="Coach ID",
+        save_action, delete_action, delete_question, add_label="Schedule Class", search_label="Sport",
         empty_text="No classes found.")
 
 
@@ -971,11 +1072,27 @@ def build_enrol_page(page_frame):
         return f"{member_id} enrolled in {class_id}."
 
     def open_rows(search_text):
-        """Upcoming classes that still have space."""
-        return class_rows(True, True)
+        """Upcoming classes that still have space, optionally only those
+        whose sport or coach's name contains search_text."""
+        rows = class_rows(True, True)
+        if search_text == "":
+            return rows
+        matching_ids = set()
+        all_classes = load_all_classes()
+        for sports_class in search_classes(all_classes, "sport", search_text):
+            matching_ids.add(sports_class.class_id)
+        for coach in search_coaches(load_all_coaches(), "name", search_text):
+            for sports_class in search_classes(all_classes, "coach", coach.get_coach_id()):
+                matching_ids.add(sports_class.class_id)
+        matching_rows = []
+        for class_id, row_text in rows:
+            if class_id in matching_ids:
+                matching_rows.append((class_id, row_text))
+        return matching_rows
 
     return common.build_pick_page(page_frame, CLASS_LIST_HEADER, open_rows, "Enrol", enrol_action,
                                   describe=describe_class, build_form=build_form, fill_form=fill_form,
+                                  search_label="Sport or coach name",
                                   empty_text="No upcoming classes with space.")
 
 
@@ -989,7 +1106,7 @@ def build_report_page(page_frame, page_hooks):
     month_variable = tk.StringVar(value="All time")
 
     list_panel, report_listbox = common.build_list_panel(
-        section_frame, f"{'Coach':<8}{'Name':<22}{'Classes':>8}{'Hours':>8}{'Commission (RM)':>18}")
+        section_frame, f"{'Coach name':<22}{'Coach ID':<10}{'Classes':>8}{'Hours':>8}{'Commission (RM)':>18}")
     list_panel.pack(side="top", fill="both", expand=True)
     total_label = tk.Label(section_frame, text="", font=common.HEADING_FONT, bg=common.APP_BG,
                            fg=common.ACCENT_COLOR, anchor="w")
@@ -1007,17 +1124,21 @@ def build_report_page(page_frame, page_hooks):
 
         report_listbox.delete(0, tk.END)
         total_hours = 0
-        total_commission = 0.0
-        for coach in load_all_coaches():
+        commission_sum = 0.0
+        coach_list = load_all_coaches()
+        if search_entry.get().strip() != "":
+            coach_list = search_coaches(coach_list, "name", search_entry.get())
+        for coach in coach_list:
             coach_id = coach.get_coach_id()
             coach_classes = search_classes(month_classes, "coach", coach_id)
-            commission = total_commission_recursive(coach_classes, coach.get_commission_pct())
+            commission = total_commission(coach_classes, coach.get_commission_pct())
             coach_hours = hours_dict.get(coach_id, 0)
             total_hours += coach_hours
-            total_commission += commission
-            report_listbox.insert(tk.END, (f"{coach_id:<8}{coach.get_name()[:21]:<22}{len(coach_classes):>8}"
+            commission_sum += commission
+            report_listbox.insert(tk.END, (f"{common.fit_text(coach.get_name(), 21):<22}{coach_id:<10}"
+                                           f"{len(coach_classes):>8}"
                                            f"{coach_hours:>8}{commission:>18.2f}"))
-        total_label.config(text=f"Total: {total_hours} hours, RM {total_commission:.2f} commission")
+        total_label.config(text=f"Total: {total_hours} hours, RM {commission_sum:.2f} commission")
 
     def on_month_changed(chosen_month):
         """Recalculate when a different month is picked."""
@@ -1028,6 +1149,19 @@ def build_report_page(page_frame, page_hooks):
                                          tip="Pick a month (YYYY-MM) to see only that month's classes, "
                                              "or All time for everything.")
     month_menu.pack(side="left", padx=6)
+    tk.Label(top_row, text="Coach name:", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left", padx=(16, 0))
+    search_entry = common.make_entry(top_row, width=18,
+                                     tip="Type part of a coach's name and press Enter or click Search. "
+                                         "Leave it empty to show every coach.")
+    search_entry.pack(side="left", padx=6)
+
+    def on_search_key(event):
+        """Search when Enter is pressed in the name box."""
+        refresh_report()
+
+    search_entry.bind("<Return>", on_search_key)
+    common.make_button(top_row, "Search", refresh_report,
+                       tip="Show only coaches whose name contains the text in the box.").pack(side="left")
 
     def on_show():
         """Rebuild the month list (from class dates) and the report."""

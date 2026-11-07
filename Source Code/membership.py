@@ -210,7 +210,7 @@ def update_member(member_id, new_name, new_phone, new_type):
     if not member_found:
         raise ValueError(f"No member found with ID {member_id}.")
 
-    common.write_lines(common.MEMBERS_FILE, updated_lines)
+    common.rewrite_records(common.MEMBERS_FILE, updated_lines, line_to_member)
     return load_all_members()
 
 
@@ -231,7 +231,7 @@ def renew_member(member_id):
     if new_expiry is None:
         raise ValueError(f"No member found with ID {member_id}.")
 
-    common.write_lines(common.MEMBERS_FILE, updated_lines)
+    common.rewrite_records(common.MEMBERS_FILE, updated_lines, line_to_member)
     return new_expiry
 
 
@@ -255,7 +255,7 @@ def delete_member(member_id):
     if not member_found:
         raise ValueError(f"No member found with ID {member_id}.")
 
-    common.write_lines(common.MEMBERS_FILE, remaining_lines)
+    common.rewrite_records(common.MEMBERS_FILE, remaining_lines, line_to_member)
 
 
 def count_members_by_type(member_list):
@@ -280,6 +280,14 @@ def members_expiring_within(member_list, days):
         if 0 <= days_left <= days:
             expiring_list.append(member)
     return expiring_list
+
+
+def count_members(member_list):
+    """Count members: recursively (rubric) for normal sizes, with len()
+    above common.RECURSION_SAFE_LIMIT, where recursion would crash."""
+    if len(member_list) <= common.RECURSION_SAFE_LIMIT:
+        return count_members_recursive(member_list)
+    return len(member_list)
 
 
 def count_members_recursive(member_list, index=0):
@@ -326,7 +334,7 @@ MEMBERSHIP_ACTIONS = [
      "Click the member, then click Renew. The membership is extended from today."),
 ]
 
-MEMBER_LIST_HEADER = f"{'ID':<8}{'Name':<20}{'Type':<14}{'Expires':<11}{'Status':<8}"
+MEMBER_LIST_HEADER = f"{'Member ID':<10}{'Name':<20}{'Type':<14}{'Expires':<11}{'Status':<8}"
 
 
 def show_problem(error):
@@ -356,7 +364,8 @@ def member_rows(search_text):
         member_list = search_members(member_list, "name", search_text)
     rows = []
     for member in member_list:
-        rows.append((member.get_member_id(), (f"{member.get_member_id():<8}{member.get_name()[:19]:<20}"
+        rows.append((member.get_member_id(), (f"{member.get_member_id():<10}"
+                                              f"{common.fit_text(member.get_name(), 19):<20}"
                                               f"{member.get_membership_type():<14}{member.get_expiry_date():<11}"
                                               f"{member_status(member):<8}")))
     return rows
@@ -367,12 +376,15 @@ def describe_member(member_id):
     member = find_member_by_id(load_all_members(), member_id)
     if member is None:
         return "This member no longer exists."
-    return (f"{member.get_member_id()}\n\n"
-            f"{member.get_name()}\n"
-            f"Phone: {member.get_phone()}\n"
-            f"{member.get_membership_type()} membership\n"
-            f"Joined: {member.get_join_date()}\n"
-            f"Expires: {member.get_expiry_date()} ({member_status(member)})")
+    return common.details_text([
+        ("Member ID", member.get_member_id()),
+        ("Name", member.get_name()),
+        ("Phone", member.get_phone()),
+        ("Type", member.get_membership_type()),
+        ("Joined", member.get_join_date()),
+        ("Expires", member.get_expiry_date()),
+        ("Status", member_status(member)),
+    ])
 
 
 def renew_action(member_id):
@@ -402,7 +414,7 @@ def members_summary():
         if membership_type in type_counts:
             count_parts.append(f"{membership_type} {type_counts[membership_type]}")
     expiring_count = len(members_expiring_within(all_members, 30))
-    return (f"{count_members_recursive(all_members)} members ({', '.join(count_parts)}). "
+    return (f"{count_members(all_members)} members ({', '.join(count_parts)}). "
             f"{expiring_count} expiring in the next 30 days.")
 
 
@@ -545,7 +557,7 @@ def build_register_page(section_frame, page_hooks):
         """Register the person with the chosen membership type."""
         try:
             new_member = register_member(name_entry.get(), phone_entry.get(), register_state["type"])
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             show_problem(error)
             return
         fee = common.MEMBERSHIP_FEES[new_member.get_membership_type()]

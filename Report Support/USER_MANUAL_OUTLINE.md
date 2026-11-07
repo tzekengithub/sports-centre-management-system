@@ -40,13 +40,16 @@
    - **Screenshot:** "Please enter a valid number" message for a bad rate.
    - **Screenshot:** a coach row highlighted while being edited.
 2. **Manage Classes:** with nothing clicked, fill the form and click
-   Schedule Class; click a class's row to edit it and click Save
-   Changes; click Delete beside a class to cancel it.
+   Schedule Class (for Private, also pick the member); click a class's
+   row to edit it and click Save Changes; click Delete beside a class to
+   cancel it. Search by sport.
    - **Screenshot:** Manage Classes with a class being edited.
-3. **Enrol Member:** click a class, pick a member, Enrol.
-4. **Remove Member:** click a class/member row, Remove.
+3. **Enrol Member:** click a class, pick a member, Enrol (search by sport
+   or coach name).
+4. **Remove Member:** click a class/member row, Remove (search by member
+   name).
    - **Screenshot:** Remove Member page.
-5. **Hours & Commission:** pick a month or All time.
+5. **Hours & Commission:** pick a month or All time; search a coach name.
    - **Screenshot:** hours and commission table.
 
 ## Module 4 - Billing, Payments & Finance

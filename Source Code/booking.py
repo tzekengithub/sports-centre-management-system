@@ -239,8 +239,12 @@ def create_booking(member_id, sport, court_no, date_text, start_hour, duration_h
         raise ValueError(f"No member found with ID {member_id}.")
     if not common.is_valid_date(date_text):
         raise ValueError("Booking date must be a real date in YYYY-MM-DD form.")
+    # One standard form (2027-1-5 -> 2027-01-05), so clash checks compare like with like.
+    date_text = common.normalize_date(date_text)
     if date_text < common.today_string():
         raise ValueError("You cannot book a date in the past.")
+    if date_text == common.today_string() and start_hour <= common.current_hour():
+        raise ValueError(f"{start_hour:02d}:00 has already started today. Pick a later time.")
 
     booking_list = load_all_bookings()
     if has_clash(booking_list, sport, court_no, date_text, start_hour, duration_hrs):
@@ -290,7 +294,7 @@ def cancel_booking(booking_id):
     updated_lines = []
     for booking in booking_list:
         updated_lines.append(booking.to_line())
-    common.write_lines(common.BOOKINGS_FILE, updated_lines)
+    common.rewrite_records(common.BOOKINGS_FILE, updated_lines, line_to_booking)
 
 
 def booking_time_text(booking):
@@ -330,7 +334,7 @@ BOOKING_ACTIONS = [
      "Search to find someone's bookings."),
 ]
 
-BOOKING_LIST_HEADER = f"{'ID':<8}{'Date':<11}{'Time':<12}{'Sport':<10}{'Court':<6}{'Member':<8}"
+BOOKING_LIST_HEADER = f"{'Booking ID':<11}{'Date':<11}{'Time':<12}{'Sport':<10}{'Court':<6}{'Member ID':<9}"
 
 
 def show_problem(error):
@@ -362,7 +366,7 @@ def booking_rows(status, search_text):
     sort_rows.sort()
     rows = []
     for date_text, start_hour, booking_id, booking in sort_rows:
-        rows.append((booking_id, (f"{booking_id:<8}{date_text:<11}{booking_time_text(booking):<12}"
+        rows.append((booking_id, (f"{booking_id:<11}{date_text:<11}{booking_time_text(booking):<12}"
                                   f"{booking.get_sport():<10}{booking.get_court_no():<6}"
                                   f"{booking.get_member_id():<8}")))
     return rows
@@ -372,13 +376,17 @@ def describe_booking(booking_id):
     """Return the details text for one booking."""
     for booking in load_all_bookings():
         if booking.get_booking_id() == booking_id:
-            return (f"{booking.get_booking_id()}\n\n"
-                    f"{booking.get_sport()}, Court {booking.get_court_no()}\n"
-                    f"{booking.get_date_text()}  {booking_time_text(booking)} "
-                    f"({booking.get_duration_hrs()} hour(s))\n"
-                    f"Member: {booking.get_member_id()}\n"
-                    f"Price: RM {booking.get_price():.2f}\n"
-                    f"Status: {booking.get_status()}")
+            return common.details_text([
+                ("Booking ID", booking.get_booking_id()),
+                ("Sport", booking.get_sport()),
+                ("Court", booking.get_court_no()),
+                ("Date", booking.get_date_text()),
+                ("Time", booking_time_text(booking)),
+                ("Duration", f"{booking.get_duration_hrs()} hour(s)"),
+                ("Member ID", booking.get_member_id()),
+                ("Price", f"RM {booking.get_price():.2f}"),
+                ("Status", booking.get_status()),
+            ])
     return "This booking no longer exists."
 
 
@@ -409,7 +417,7 @@ def build_cancel_page(page_frame):
 def build_book_page(section_frame, page_hooks):
     """Build the Book a Court page: date + sport pickers, the
     courts-by-hours grid, and the member picker with a Book button."""
-    grid_state = {"sport": list(common.SPORTS.keys())[0], "court": None, "hours": []}
+    grid_state = {"sport": list(common.SPORTS.keys())[0], "court": None, "hours": [], "date": ""}
     sport_buttons = {}
     member_choice_ids = {}
 
@@ -452,6 +460,10 @@ def build_book_page(section_frame, page_hooks):
             info_label.config(text="Type a date as YYYY-MM-DD, or click the calendar.")
             update_selection_label()
             return
+        # Compare in the standard form, so a date typed as 2027-1-5 still
+        # matches bookings saved as 2027-01-05.
+        date_text = common.normalize_date(date_text)
+        grid_state["date"] = date_text
 
         grid, hour_list, court_count = build_availability_grid(sport, date_text)
         booking_list = load_all_bookings()
@@ -540,7 +552,7 @@ def build_book_page(section_frame, page_hooks):
             """Handle a click on this grid cell."""
             if cell_value == "Booked":
                 covering = find_booking_at(booking_list, grid_state["sport"], court_no,
-                                           date_entry.get().strip(), hour)
+                                           grid_state["date"], hour)
                 if covering is not None:
                     messagebox.showinfo("Booked", (f"Court {court_no} at {hour:02d}:00 is booked\n"
                                                    f"({covering.get_booking_id()}, {booking_time_text(covering)})."))
@@ -638,7 +650,7 @@ def build_book_page(section_frame, page_hooks):
             new_booking = create_booking(member_choice_ids[member_variable.get()], grid_state["sport"],
                                          grid_state["court"], date_entry.get().strip(),
                                          min(selected_hours), len(selected_hours))
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             show_problem(error)
             return
         messagebox.showinfo("Booked", (f"Booking {new_booking.get_booking_id()} confirmed.\n"
