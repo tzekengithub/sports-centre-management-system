@@ -36,19 +36,20 @@
    - **Screenshot:** View Members.
 
 ## Module 3 - Coaching & Class Management
-1. **Add Coach:** fill the form, click Add Coach.
+1. **Manage Coaches:** fill the blank form and click Add Coach; click a
+   coach's row to edit them and click Save Changes; click Delete beside
+   a coach to remove them.
    - **Screenshot:** "Please enter a valid number" message for a bad rate.
-2. **Update Coach** / **Remove Coach:** click a coach, then Save Changes
-   or Remove.
-3. **Schedule Class:** coach, Private/Group, date, time, duration, max
+   - **Screenshot:** a coach row highlighted while being edited.
+2. **Schedule Class:** coach, Private/Group, date, time, duration, max
    people, fee, click Schedule Class.
    - **Screenshot:** Schedule Class form.
-4. **Update Class** / **Cancel Class:** click a class, then Save Changes
+3. **Update Class** / **Cancel Class:** click a class, then Save Changes
    or Cancel Class.
-5. **Enrol Member:** click a class, pick a member, Enrol.
-6. **Remove Member:** click a class/member row, Remove.
+4. **Enrol Member:** click a class, pick a member, Enrol.
+5. **Remove Member:** click a class/member row, Remove.
    - **Screenshot:** Remove Member page.
-7. **Hours & Commission:** pick a month or All time.
+6. **Hours & Commission:** pick a month or All time.
    - **Screenshot:** hours and commission table.
 
 ## Module 4 - Billing, Payments & Finance

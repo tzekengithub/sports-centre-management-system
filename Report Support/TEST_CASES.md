@@ -112,17 +112,27 @@ workflow rules. "Actual" is what really happened, not a guess.
 | FIX-11 | Billing the same booking twice | generate a COURT bill for a booking twice | Second one refused; the booking no longer appears in the New Bill drop-down | Exactly so | PASS |
 | FIX-12 | nan as a retail price or payment | retail price nan; pay with nan | Both rejected | Both rejected | PASS |
 
+## Manage Coaches page (Entry 18)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| MC-01 | Blank form adds a coach | Ch'ng Lee, 0189990000, rate "abc" then 45, commission 15 | "abc" -> "Please enter a valid number for Hourly rate."; 45 -> CCH003 added, every field empty again | Exactly so | PASS |
+| MC-02 | Clicking a row loads it for updating | click Lim Wei's row | Form filled, row highlighted, button reads Save Changes, New shown | Exactly so | PASS |
+| MC-03 | Save changes | rate 60 -> 65, Save Changes | "Coach CCH001 saved." | Exactly so | PASS |
+| MC-04 | Delete beside a coach with classes | Delete on CCH001's row | Blocked: "... Cancel those classes first." | Exactly so | PASS |
+| MC-05 | Delete beside a coach without classes | Delete on CCH003's row | Deleted; row disappears | Only CCH001 and CCH002 left | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |
 |---|---|---|---|---|---|
 | TAB-01 | Switch to every tab in turn | click Booking, Membership, Coaching, Billing, Home | Content area shows exactly one frame, the right module; no extra window opens; clicked tab highlighted | One frame each time, 0 extra windows | PASS |
-| TAB-02 | Every tab opens on its action menu; every action opens its own page | all 23 actions in the four tabs | Menu shows one button per action; each page has Back, its name, one instruction line and one main button | All 23 pages correct (screenshots taken) | PASS |
+| TAB-02 | Every tab opens on its action menu; every action opens its own page | all 21 actions in the four tabs | Menu shows one button per action; each page has Back, its name, one instruction line and one main button | All 23 pages correct (screenshots taken) | PASS |
 | TAB-03 | Date picker opened from inside a tab | Booking, Coaching Classes, Billing Daily Revenue calendar buttons | Pop-up opens; picking a day refreshes the grid / revenue straight away | Opened, no error | PASS |
 | TAB-04 | Typing a date without pressing Enter | type a new date in Booking's date box | Grid switches to that date as soon as the date is complete | Redrawn (found as a bug during testing and fixed) | PASS |
 | TAB-05 | Every button on every action page, blank and with a row picked | 84 button clicks | No uncaught exception | None raised | PASS |
 | TAB-06 | Clicking the tab you are on | open Billing > Pay Bill, click Billing | Back to the Billing menu | Menu shown | PASS |
-| TAB-07 | Every action done through its page | Register, Renew, Add Coach (inf rate rejected), Schedule, Enrol, Remove Member, Cancel Class, Book, Cancel, Delete booking, Create Bill, Pay (nan rejected, change RM 12.00), View Receipt | Each succeeds with a clear message | All succeeded | PASS |
+| TAB-07 | Every action done through its page | Register, Renew, add coach (inf rate rejected), Schedule, Enrol, Remove Member, Cancel Class, Book, Cancel, Delete booking, Create Bill, Pay (nan rejected, change RM 12.00), View Receipt | Each succeeds with a clear message | All succeeded | PASS |
 
 ## What this does NOT cover
 

@@ -75,9 +75,7 @@ time, cancel it and book the new time.
 
 | Action | What you do |
 |---|---|
-| **Add Coach** | Fill in name, phone, sport (Badminton, Futsal, Tennis, Squash, Swimming or Yoga), hourly rate (RM 1–500) and commission (0–100 %), click **Add Coach**. The form empties for the next one. |
-| **Update Coach** | Click the coach, change the details, **Save Changes**. Changing the sport also changes their upcoming classes. |
-| **Remove Coach** | Click the coach, **Remove**. Only possible once none of their classes are left on record. |
+| **Manage Coaches** | One page for adding, updating and deleting coaches. **To add:** fill in the blank form (name, phone, sport — Badminton, Futsal, Tennis, Squash, Swimming or Yoga — hourly rate RM 1–500, commission 0–100 %) and click **Add Coach**. **To update:** click the coach's row (it turns green), change the details, click **Save Changes** (changing the sport also changes their upcoming classes); **New** goes back to a blank form. **To delete:** click **Delete** beside the coach — only possible once none of their classes are left on record. |
 | **Schedule Class** | Pick the coach, Private or Group, date, start time and duration (1–4 hours), type max people and the fee per person, **Schedule Class**. A private session is always for 1 person; a group takes up to 30. |
 | **Update Class** | Click an upcoming class, change date, time, duration, max people or fee, **Save Changes**. |
 | **Cancel Class** | Click the class, **Cancel Class**. |

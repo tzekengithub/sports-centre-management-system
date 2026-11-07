@@ -422,6 +422,25 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   rejected, view the receipt); 84 button clicks with blank input and
   with a row picked: no exception. Data files were restored afterward.
 
+## Entry 18 - Add, update and delete coaches on one page
+- **Asked:** Merge Add Coach, Update Coach and Remove Coach into one
+  page: typing into the blank form adds a coach, clicking a row updates
+  that coach, and a Delete button sits beside each row.
+- **Produced:** `build_manage_coaches_page` in `coaching.py`, replacing
+  the three pages (Coaching now has 7 actions). A tkinter Listbox can't
+  hold buttons, so the list is built from one row widget per coach
+  (text + red Delete) inside the new `common.build_scroll_area`. The
+  row being edited is highlighted; New returns to a blank form. The
+  name search (which uses `search_coaches`) and the while-loop
+  `find_coach_by_id` are still used. The rules are unchanged: bad
+  numbers get a friendly message, and a coach with classes on record
+  can't be deleted.
+- **Verify:** Tested on the real display (add with a bad then a good
+  rate, click a row, save, Delete blocked for a coach with a class,
+  Delete for a new coach) and a 77-click blank-input run with no
+  exception; see MC-01 to MC-05 in `TEST_CASES.md`. Data restored
+  afterward.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

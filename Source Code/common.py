@@ -400,6 +400,33 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
     return refresh
 
 
+def build_scroll_area(parent):
+    """Build a bordered, vertically scrolling area for a list made of
+    widgets (e.g. rows that each carry their own button, which a Listbox
+    cannot hold). Returns the inner frame to pack the rows into."""
+    holder = tk.Frame(parent, bg=PANEL_BG, highlightbackground="#000000", highlightthickness=1)
+    holder.pack(side="top", fill="both", expand=True)
+    canvas = tk.Canvas(holder, bg=PANEL_BG, highlightthickness=0)
+    scrollbar = tk.Scrollbar(holder, command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.pack(side="left", fill="both", expand=True)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    inner_frame = tk.Frame(canvas, bg=PANEL_BG)
+    inner_window = canvas.create_window((0, 0), window=inner_frame, anchor="nw")
+
+    def on_inner_resized(event):
+        """Let the scrollbar cover all the rows."""
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    def on_canvas_resized(event):
+        """Stretch the rows to the full width of the area."""
+        canvas.itemconfigure(inner_window, width=event.width)
+
+    inner_frame.bind("<Configure>", on_inner_resized)
+    canvas.bind("<Configure>", on_canvas_resized)
+    return inner_frame
+
+
 def selected_index(listbox):
     """Return the index of the selected row in listbox, or None."""
     selection = listbox.curselection()

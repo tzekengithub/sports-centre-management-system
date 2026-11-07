@@ -516,18 +516,14 @@ def total_commission_recursive(class_list, coach_commission_pct, index=0):
 #
 # The tab opens on a menu asking "What would you like to do?". Each
 # action has its own one-page screen with a Back button:
-#   Add Coach, Update Coach, Remove Coach,
+#   Manage Coaches (add, update and delete on one page),
 #   Schedule Class, Update Class, Cancel Class,
 #   Enrol Member, Remove Member, Hours & Commission
 # ---------------------------------------------------------------------------
 COACHING_ACTIONS = [
-    ("Add Coach", "Register a new coach",
-     "Fill in the coach's details and click Add Coach. Rate: RM 1-500 per hour. Commission: 0-100 %."),
-    ("Update Coach", "Change a coach's details",
-     "Click the coach, change the details on the right, then click Save Changes. "
-     "Changing the sport also changes their upcoming classes."),
-    ("Remove Coach", "Delete a coach",
-     "Click the coach, then click Remove. Only possible once none of their classes are left."),
+    ("Manage Coaches", "Add, update or delete coaches",
+     "Blank form = add a new coach. Click a coach to update them, then Save Changes. "
+     "Click Delete beside a coach to remove them."),
     ("Schedule Class", "New private session or group class",
      "Pick the coach and the class details, then click Schedule Class. "
      "A private session is for 1 person."),
@@ -574,12 +570,7 @@ def build_coaching_tab(parent):
     asking what to do; each action has its own simple page."""
     window = tk.Frame(parent, bg=common.APP_BG)
     page_frames, page_hooks = common.build_action_menu(window, "Coaching & Class Management", COACHING_ACTIONS)
-    build_add_coach_page(page_frames["Add Coach"], page_hooks)
-    page_hooks["Update Coach"] = build_update_coach_page(page_frames["Update Coach"])
-    page_hooks["Remove Coach"] = common.build_pick_page(
-        page_frames["Remove Coach"], COACH_LIST_HEADER, coach_rows, "Remove", remove_coach_action,
-        describe=describe_coach, confirm_text=remove_coach_question, danger=True,
-        search_label="Name", empty_text="No coaches yet.")
+    build_manage_coaches_page(page_frames["Manage Coaches"], page_hooks)
     build_schedule_page(page_frames["Schedule Class"], page_hooks)
     page_hooks["Update Class"] = build_update_class_page(page_frames["Update Class"])
     page_hooks["Cancel Class"] = common.build_pick_page(
@@ -608,28 +599,6 @@ def coach_rows(search_text):
                                             f"{coach.get_sport():<11}{coach.get_hourly_rate():>7.2f}"
                                             f"{coach.get_commission_pct():>7.0f}")))
     return rows
-
-
-def describe_coach(coach_id):
-    """Return the details text for one coach (found with the while loop)."""
-    coach = find_coach_by_id(load_all_coaches(), coach_id)
-    if coach is None:
-        return "This coach no longer exists."
-    return (f"{coach.get_coach_id()}\n\n{coach.get_name()}\nPhone: {coach.get_phone()}\n"
-            f"Sport: {coach.get_sport()}\nRate: RM {coach.get_hourly_rate():.2f} per hour\n"
-            f"Commission: {coach.get_commission_pct():g} %\n"
-            f"Classes on record: {count_classes_for_coach(coach_id)}")
-
-
-def remove_coach_action(coach_id):
-    """Remove the picked coach."""
-    delete_coach(coach_id)
-    return f"Coach {coach_id} removed."
-
-
-def remove_coach_question(coach_id):
-    """Confirmation question for removing a coach."""
-    return f"Remove coach {coach_id} permanently?"
 
 
 def class_rows(only_upcoming, only_with_space):
@@ -726,7 +695,7 @@ def remove_member_question(row_id):
 # ----- pages with their own forms -----
 def add_coach_fields(form_frame, first_row):
     """Add the five coach fields to form_frame starting at first_row and
-    return them as a dictionary (used by Add Coach and Update Coach)."""
+    return them as a dictionary (used by Manage Coaches)."""
     fields = {}
     fields["name"] = common.make_entry(form_frame)
     common.add_form_row(form_frame, first_row, "Name", fields["name"])
@@ -750,71 +719,164 @@ def read_coach_numbers(fields):
     return hourly_rate, commission
 
 
-def build_add_coach_page(page_frame, page_hooks):
-    """Build the Add Coach page: one form and one button."""
-    card = common.make_card(page_frame)
-    card.pack(side="top", anchor="w")
-    fields = add_coach_fields(card, 0)
+def build_manage_coaches_page(page_frame, page_hooks):
+    """Build the Manage Coaches page: add, update and remove coaches on
+    one screen. A blank form adds a new coach; clicking a coach's row
+    loads it into the form for updating; the Delete button beside each
+    row removes that coach."""
+    coach_state = {"editing_id": None}
+    row_widgets = {}
 
-    def clear_form():
-        """Empty EVERY field, including rate and commission."""
+    # --- left: name search + one row per coach, each with its own Delete ---
+    left_frame = tk.Frame(page_frame, bg=common.APP_BG)
+    left_frame.pack(side="left", fill="both", expand=True)
+    search_row = tk.Frame(left_frame, bg=common.APP_BG)
+    search_row.pack(side="top", fill="x", pady=(0, 6))
+    tk.Label(search_row, text="Name", font=common.LABEL_FONT, bg=common.APP_BG).pack(side="left")
+    search_entry = common.make_entry(search_row, width=18)
+    search_entry.pack(side="left", padx=6)
+    tk.Label(left_frame, text=" " + COACH_LIST_HEADER, font=common.MONO_FONT, bg=common.APP_BG,
+             fg=common.MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x")
+    rows_frame = common.build_scroll_area(left_frame)
+
+    # --- right: the add / update form ---
+    card = common.make_card(page_frame)
+    card.pack(side="right", fill="y", padx=(12, 0))
+    form_title = tk.Label(card, text="", font=common.HEADING_FONT, bg=common.PANEL_BG,
+                          fg=common.ACCENT_COLOR)
+    form_title.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+    fields = add_coach_fields(card, 1)
+    button_row = tk.Frame(card, bg=common.PANEL_BG)
+    button_row.grid(row=6, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+    def highlight_row(coach_id):
+        """Colour the row being edited so it is obvious which coach it is."""
+        for row_coach_id in row_widgets:
+            if row_coach_id == coach_id:
+                row_colour = common.FREE_COLOR
+            else:
+                row_colour = common.PANEL_BG
+            row_frame, row_label = row_widgets[row_coach_id]
+            row_frame.config(bg=row_colour)
+            row_label.config(bg=row_colour)
+
+    def start_new():
+        """Empty EVERY field and switch the form to 'add a new coach'."""
+        coach_state["editing_id"] = None
         for field_name in ("name", "phone", "rate", "commission"):
             fields[field_name].delete(0, tk.END)
         fields["sport"].set(common.COACHING_SPORTS[0])
+        form_title.config(text="New coach")
+        save_button.config(text="Add Coach")
+        new_button.pack_forget()
+        highlight_row(None)
 
-    def on_add():
-        """Register the coach from the form."""
-        try:
-            hourly_rate, commission = read_coach_numbers(fields)
-            new_coach = register_coach(fields["name"].get(), fields["phone"].get(), fields["sport"].get(),
-                                       hourly_rate, commission)
-        except ValueError as error:
-            show_problem(error)
-            return
-        messagebox.showinfo("Added", f"Coach {new_coach.get_coach_id()} {new_coach.get_name()} added.")
-        clear_form()
-
-    common.make_button(card, "Add Coach", on_add).grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 0))
-    page_hooks["Add Coach"] = clear_form
-
-
-def build_update_coach_page(page_frame):
-    """Build the Update Coach page and return its refresh function."""
-    form_fields = {}
-
-    def build_form(form_frame):
-        """Add the coach fields."""
-        form_fields.update(add_coach_fields(form_frame, 0))
-
-    def fill_form(coach_id):
-        """Put the picked coach's details into the fields."""
+    def edit_coach(coach_id):
+        """Load the clicked coach into the form for updating."""
         coach = find_coach_by_id(load_all_coaches(), coach_id)
         if coach is None:
             return
+        coach_state["editing_id"] = coach_id
         for field_name, value in (("name", coach.get_name()), ("phone", coach.get_phone()),
                                   ("rate", f"{coach.get_hourly_rate():.2f}"),
                                   ("commission", f"{coach.get_commission_pct():g}")):
-            form_fields[field_name].delete(0, tk.END)
-            form_fields[field_name].insert(0, value)
-        form_fields["sport"].set(coach.get_sport())
+            fields[field_name].delete(0, tk.END)
+            fields[field_name].insert(0, value)
+        fields["sport"].set(coach.get_sport())
+        form_title.config(text=f"Edit coach {coach_id}")
+        save_button.config(text="Save Changes")
+        new_button.pack(side="left", padx=(6, 0))
+        highlight_row(coach_id)
 
-    def save_action(coach_id):
-        """Save the edited coach; mention classes moved to a new sport."""
-        hourly_rate, commission = read_coach_numbers(form_fields)
-        moved_count = update_coach(coach_id, form_fields["name"].get(), form_fields["phone"].get(),
-                                   form_fields["sport"].get(), hourly_rate, commission)
-        message = f"Coach {coach_id} saved."
-        if moved_count > 0:
-            message += f"\n{moved_count} upcoming class(es) changed to {form_fields['sport'].get()}."
-        return message
+    def remove_coach(coach_id):
+        """Delete the coach on this row (after confirming)."""
+        if not messagebox.askyesno("Delete coach", f"Delete coach {coach_id} permanently?"):
+            return
+        try:
+            delete_coach(coach_id)
+        except ValueError as error:
+            show_problem(error)
+            return
+        messagebox.showinfo("Deleted", f"Coach {coach_id} deleted.")
+        if coach_state["editing_id"] == coach_id:
+            start_new()
+        refresh_rows()
 
-    def short_description(coach_id):
-        """Just the coach ID above the form."""
-        return f"Editing {coach_id}"
+    def make_row_click(coach_id):
+        """Return the click handler for one row."""
+        def row_click(event):
+            """Edit this row's coach."""
+            edit_coach(coach_id)
+        return row_click
 
-    return common.build_pick_page(page_frame, COACH_LIST_HEADER, coach_rows, "Save Changes", save_action,
-                                  describe=short_description, build_form=build_form, fill_form=fill_form,
-                                  search_label="Name", empty_text="No coaches yet.")
+    def make_row_delete(coach_id):
+        """Return the command for one row's Delete button."""
+        def row_delete():
+            """Delete this row's coach."""
+            remove_coach(coach_id)
+        return row_delete
+
+    def refresh_rows():
+        """Rebuild one row (text + Delete button) per coach matching the search."""
+        for child_widget in rows_frame.winfo_children():
+            child_widget.destroy()
+        row_widgets.clear()
+        coach_list = coach_rows(search_entry.get().strip())
+        if len(coach_list) == 0:
+            tk.Label(rows_frame, text="No coaches found.", font=common.LABEL_FONT, bg=common.PANEL_BG,
+                     fg=common.MUTED_TEXT_COLOR).pack(side="top", anchor="w", padx=6, pady=6)
+        for coach_id, row_text in coach_list:
+            row_frame = tk.Frame(rows_frame, bg=common.PANEL_BG, cursor="hand2")
+            row_frame.pack(side="top", fill="x")
+            delete_button = common.make_button(row_frame, "Delete", make_row_delete(coach_id), style="danger")
+            delete_button.config(font=common.SMALL_FONT, padx=8, pady=1)
+            delete_button.pack(side="right", padx=4, pady=2)
+            row_label = tk.Label(row_frame, text=row_text, font=common.MONO_FONT, bg=common.PANEL_BG,
+                                 anchor="w", cursor="hand2")
+            row_label.pack(side="left", fill="x", expand=True, padx=(2, 0))
+            row_frame.bind("<Button-1>", make_row_click(coach_id))
+            row_label.bind("<Button-1>", make_row_click(coach_id))
+            row_widgets[coach_id] = (row_frame, row_label)
+        highlight_row(coach_state["editing_id"])
+
+    def on_save():
+        """Add a new coach (blank form) or save the coach being edited."""
+        try:
+            hourly_rate, commission = read_coach_numbers(fields)
+            if coach_state["editing_id"] is None:
+                new_coach = register_coach(fields["name"].get(), fields["phone"].get(), fields["sport"].get(),
+                                           hourly_rate, commission)
+                message = f"Coach {new_coach.get_coach_id()} {new_coach.get_name()} added."
+            else:
+                moved_count = update_coach(coach_state["editing_id"], fields["name"].get(), fields["phone"].get(),
+                                           fields["sport"].get(), hourly_rate, commission)
+                message = f"Coach {coach_state['editing_id']} saved."
+                if moved_count > 0:
+                    message += f"\n{moved_count} upcoming class(es) changed to {fields['sport'].get()}."
+        except ValueError as error:
+            show_problem(error)
+            return
+        messagebox.showinfo("Saved", message)
+        start_new()
+        refresh_rows()
+
+    def on_search_key(event):
+        """Search when Enter is pressed in the name box."""
+        refresh_rows()
+
+    search_entry.bind("<Return>", on_search_key)
+    common.make_button(search_row, "Search", refresh_rows).pack(side="left")
+    save_button = common.make_button(button_row, "Add Coach", on_save)
+    save_button.pack(side="left")
+    new_button = common.make_button(button_row, "New", start_new, style="light")
+
+    def on_show():
+        """Start with a blank form and a fresh list whenever the page opens."""
+        search_entry.delete(0, tk.END)
+        start_new()
+        refresh_rows()
+
+    page_hooks["Manage Coaches"] = on_show
 
 
 def add_class_time_fields(form_frame, first_row):

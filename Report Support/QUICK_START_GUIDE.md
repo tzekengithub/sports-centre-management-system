@@ -24,7 +24,7 @@ always ask first.
 |---|---|
 | **Booking** | Book a Court · Cancel a Booking · Delete a Booking |
 | **Membership** | Register · Update Member · Renew Membership · Delete Member · View Members |
-| **Coaching** | Add Coach · Update Coach · Remove Coach · Schedule Class · Update Class · Cancel Class · Enrol Member · Remove Member · Hours & Commission |
+| **Coaching** | Manage Coaches · Schedule Class · Update Class · Cancel Class · Enrol Member · Remove Member · Hours & Commission |
 | **Billing** | Create Bill · Pay Bill · Void Bill · Delete Bill · View Receipt · Daily Revenue |
 
 ## Try it in a minute

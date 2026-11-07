@@ -22,7 +22,7 @@ that read/write the data files and `raise ValueError` on bad input) and a
   text), `action_function` (the work; returns a message or raises
   `ValueError`), and optionally a form (`build_form` / `fill_form`), a
   confirmation question and a summary line under the list.
-- Pages that are really a form (Register, Add Coach, Schedule Class,
+- Pages that are really a form (Register, Manage Coaches, Schedule Class,
   Create Bill) or a picture (Book a Court grid, Hours & Commission,
   Daily Revenue) are built by their own `build_..._page` function.
 
@@ -57,7 +57,8 @@ that read/write the data files and `raise ValueError` on bad input) and a
   `build_pick_page` (see above), `make_button` (green, red "danger" or
   white "light" style), `make_card`, `make_entry`, `add_form_row`,
   `make_option_menu` + `set_option_menu_choices` (drop-downs whose
-  choices can be reloaded), `build_list_panel`, `selected_index`.
+  choices can be reloaded), `build_list_panel`, `build_scroll_area`
+  (scrolling list of row widgets), `selected_index`.
 - `open_date_picker(parent, target_entry, on_picked=None)` - calendar
   pop-up; `on_picked` lets a screen refresh as soon as a day is clicked.
 - Constants: `SPORTS` (court sports with courts/rate), `COACHING_SPORTS`
@@ -121,12 +122,17 @@ Logic:
   of coach -> hours for one month, or all time), `calculate_commission`,
   `total_commission_recursive` (recursion).
 
-GUI (`build_coaching_tab`) - menu of 9 actions, one page each:
-- **Add Coach** / **Schedule Class** - one form, one button. The coach
-  form empties every field after adding. Private locks Max people at 1
-  (`apply_class_type`, a `match`). Time and duration are drop-downs.
-- **Update Coach** / **Update Class** - pick, edit the form, Save Changes.
-- **Remove Coach** / **Cancel Class** - pick, confirm, done.
+GUI (`build_coaching_tab`) - menu of 7 actions, one page each:
+- **Manage Coaches** (`build_manage_coaches_page`) - add, update and
+  delete on one page. The list is made of row widgets inside
+  `common.build_scroll_area` (a Listbox cannot hold buttons), each row
+  with its own red Delete button. A blank form means Add Coach;
+  clicking a row loads that coach (highlighted) and the button becomes
+  Save Changes; New empties every field again.
+- **Schedule Class** - one form, one button. Private locks Max people at
+  1 (`apply_class_type`, a `match`). Time and duration are drop-downs.
+- **Update Class** - pick, edit the form, Save Changes.
+- **Cancel Class** - pick, confirm, done.
 - **Enrol Member** - pick an upcoming class with space, pick the member
   (only people not already in it are offered), Enrol.
 - **Remove Member** - each row is one member in one class (row ID
