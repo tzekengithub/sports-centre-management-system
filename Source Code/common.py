@@ -427,6 +427,176 @@ def build_scroll_area(parent):
     return inner_frame
 
 
+def build_manage_page(page_frame, list_header, load_rows, item_name, build_form, clear_form, fill_form,
+                      save_action, delete_action, delete_question, add_label=None, search_label="Name",
+                      summary_text=None, empty_text="Nothing found."):
+    """Build an add / update / delete page for one kind of record:
+      - the list on the left has one row per record, each with its own
+        red Delete button beside it;
+      - clicking a row loads that record into the form on the right
+        (highlighted), and the button becomes Save Changes;
+      - with add_label given, a blank form adds a new record ("New"
+        returns to a blank form); without it, the form only appears once
+        a row is clicked.
+    The module supplies:
+      load_rows(search_text)    -> list of (record_id, row_text)
+      build_form(form_frame)    -> adds the fields (grid rows from 0)
+      clear_form()              -> empties every field
+      fill_form(record_id)      -> loads a record into the fields
+      save_action(record_id)    -> adds (record_id None) or saves; returns
+                                   a message or raises ValueError
+      delete_action(record_id)  -> deletes; returns a message or raises
+      delete_question(record_id)-> confirmation question
+      summary_text()            -> optional line under the list
+    Returns the function to put in page_hooks (blank form, fresh list)."""
+    page_state = {"editing_id": None}
+    row_widgets = {}
+
+    # --- left: search + one row per record, each with its own Delete ---
+    left_frame = tk.Frame(page_frame, bg=APP_BG)
+    left_frame.pack(side="left", fill="both", expand=True)
+    search_row = tk.Frame(left_frame, bg=APP_BG)
+    search_row.pack(side="top", fill="x", pady=(0, 6))
+    tk.Label(search_row, text=search_label, font=LABEL_FONT, bg=APP_BG).pack(side="left")
+    search_entry = make_entry(search_row, width=18)
+    search_entry.pack(side="left", padx=6)
+    tk.Label(left_frame, text=" " + list_header, font=MONO_FONT, bg=APP_BG,
+             fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x")
+    summary_label = tk.Label(left_frame, text="", font=SMALL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
+                             anchor="w", justify="left", wraplength=520)
+    summary_label.pack(side="bottom", fill="x", pady=(6, 0))
+    rows_frame = build_scroll_area(left_frame)
+
+    # --- right: the add / update form ---
+    card = make_card(page_frame)
+    card.pack(side="right", fill="y", padx=(12, 0))
+    form_title = tk.Label(card, text="", font=HEADING_FONT, bg=PANEL_BG, fg=ACCENT_COLOR, justify="left")
+    form_title.pack(side="top", anchor="w", pady=(0, 8))
+    form_frame = tk.Frame(card, bg=PANEL_BG)
+    build_form(form_frame)
+    button_row = tk.Frame(form_frame, bg=PANEL_BG)
+    button_row.grid(row=50, column=0, columnspan=3, sticky="w", pady=(10, 0))
+
+    def highlight_row(record_id):
+        """Colour the row being edited so it is obvious which one it is."""
+        for row_record_id in row_widgets:
+            if row_record_id == record_id:
+                row_colour = FREE_COLOR
+            else:
+                row_colour = PANEL_BG
+            row_frame, row_label = row_widgets[row_record_id]
+            row_frame.config(bg=row_colour)
+            row_label.config(bg=row_colour)
+
+    def start_new():
+        """Blank form (add mode), or hide the form if adding isn't offered."""
+        page_state["editing_id"] = None
+        clear_form()
+        highlight_row(None)
+        new_button.pack_forget()
+        if add_label is None:
+            form_title.config(text=f"Click a {item_name} to edit them")
+            form_frame.pack_forget()
+        else:
+            form_title.config(text=f"New {item_name}")
+            save_button.config(text=add_label)
+            form_frame.pack(side="top", anchor="w")
+
+    def edit_record(record_id):
+        """Load the clicked record into the form for updating."""
+        page_state["editing_id"] = record_id
+        clear_form()
+        fill_form(record_id)
+        form_title.config(text=f"Edit {item_name} {record_id}")
+        save_button.config(text="Save Changes")
+        form_frame.pack(side="top", anchor="w")
+        if add_label is not None:
+            new_button.pack(side="left", padx=(6, 0))
+        highlight_row(record_id)
+
+    def remove_record(record_id):
+        """Delete the record on this row (after confirming)."""
+        if not messagebox.askyesno("Delete", delete_question(record_id)):
+            return
+        try:
+            message = delete_action(record_id)
+        except ValueError as error:
+            messagebox.showerror("Please check", str(error))
+            return
+        messagebox.showinfo("Deleted", message)
+        if page_state["editing_id"] == record_id:
+            start_new()
+        refresh_rows()
+
+    def make_row_click(record_id):
+        """Return the click handler for one row."""
+        def row_click(event):
+            """Edit this row's record."""
+            edit_record(record_id)
+        return row_click
+
+    def make_row_delete(record_id):
+        """Return the command for one row's Delete button."""
+        def row_delete():
+            """Delete this row's record."""
+            remove_record(record_id)
+        return row_delete
+
+    def refresh_rows():
+        """Rebuild one row (text + Delete button) per matching record."""
+        for child_widget in rows_frame.winfo_children():
+            child_widget.destroy()
+        row_widgets.clear()
+        rows = load_rows(search_entry.get().strip())
+        if len(rows) == 0:
+            tk.Label(rows_frame, text=empty_text, font=LABEL_FONT, bg=PANEL_BG,
+                     fg=MUTED_TEXT_COLOR).pack(side="top", anchor="w", padx=6, pady=6)
+        for record_id, row_text in rows:
+            row_frame = tk.Frame(rows_frame, bg=PANEL_BG, cursor="hand2")
+            row_frame.pack(side="top", fill="x")
+            delete_button = make_button(row_frame, "Delete", make_row_delete(record_id), style="danger")
+            delete_button.config(font=SMALL_FONT, padx=8, pady=1)
+            delete_button.pack(side="right", padx=4, pady=2)
+            row_label = tk.Label(row_frame, text=row_text, font=MONO_FONT, bg=PANEL_BG,
+                                 anchor="w", cursor="hand2")
+            row_label.pack(side="left", fill="x", expand=True, padx=(2, 0))
+            row_frame.bind("<Button-1>", make_row_click(record_id))
+            row_label.bind("<Button-1>", make_row_click(record_id))
+            row_widgets[record_id] = (row_frame, row_label)
+        highlight_row(page_state["editing_id"])
+        if summary_text is not None:
+            summary_label.config(text=summary_text())
+
+    def on_save():
+        """Add a new record (blank form) or save the one being edited."""
+        try:
+            message = save_action(page_state["editing_id"])
+        except ValueError as error:
+            messagebox.showerror("Please check", str(error))
+            return
+        messagebox.showinfo("Saved", message)
+        start_new()
+        refresh_rows()
+
+    def on_search_key(event):
+        """Search when Enter is pressed in the search box."""
+        refresh_rows()
+
+    search_entry.bind("<Return>", on_search_key)
+    make_button(search_row, "Search", refresh_rows).pack(side="left")
+    save_button = make_button(button_row, "Save Changes", on_save)
+    save_button.pack(side="left")
+    new_button = make_button(button_row, "New", start_new, style="light")
+
+    def on_show():
+        """Start with a blank form and a fresh list whenever the page opens."""
+        search_entry.delete(0, tk.END)
+        start_new()
+        refresh_rows()
+
+    return on_show
+
+
 def selected_index(listbox):
     """Return the index of the selected row in listbox, or None."""
     selection = listbox.curselection()

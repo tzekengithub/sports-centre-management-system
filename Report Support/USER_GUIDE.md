@@ -24,7 +24,7 @@ each of the four modules. For a one-page cheat sheet instead, see
 ## How every tab works
 
 1. Click a tab. It asks **"What would you like to do?"** and shows one big
-   button per action (for example Register, Update Member, Delete Member).
+   button per action (for example Register, Manage Members, Renew Membership).
 2. Click an action. It opens on **its own page**, with one line at the top
    telling you exactly what to do, and one main button.
 3. Click **← Back** (or the tab again) to choose another action.
@@ -32,6 +32,12 @@ each of the four modules. For a one-page cheat sheet instead, see
 Most pages work the same way: **click a row in the list**, its details
 appear on the right, then click the button (e.g. Renew, Cancel Booking,
 Pay). Permanent actions are red and always ask you to confirm first.
+
+**Manage pages** (Manage Coaches, Manage Classes, Manage Members) do add,
+update and delete on one page: click a row to edit it (it turns green)
+and click **Save Changes**; click **Delete** beside a row to remove it;
+with nothing clicked, the blank form adds a new one (**New** clears the
+form again).
 
 - **Mistakes never crash the program.** A message tells you what to fix,
   e.g. "Please enter a valid number for Hourly rate."
@@ -59,10 +65,8 @@ time, cancel it and book the new time.
 | Action | What you do |
 |---|---|
 | **Register** | Type the name and phone, click a membership card (each shows the fee, how long it lasts and the member discount), then **Register**. The new Member ID is shown. |
-| **Update Member** | Click the member, change name/phone/type on the right, **Save Changes**. |
 | **Renew Membership** | Click the member, **Renew**. It's extended from today. |
-| **Delete Member** | Click the member, **Delete**. Not allowed while they have an upcoming booking or an unpaid bill. |
-| **View Members** | Everyone with their type, expiry and Active/Expired status. The line underneath shows members per type and how many expire within 30 days. |
+| **Manage Members** | Everyone with their type, expiry and Active/Expired status; the line underneath shows members per type and how many expire within 30 days. **Click a member** to change name/phone/type, then **Save Changes**. **Delete** beside a member removes them — not allowed while they have an upcoming booking or an unpaid bill. New members are added with **Register**. |
 
 - Names may contain letters, spaces, `/` and `'` — e.g. "Ravi a/l Kumar",
   "Muthu s/o Sami", "Ch'ng Wei".
@@ -76,9 +80,7 @@ time, cancel it and book the new time.
 | Action | What you do |
 |---|---|
 | **Manage Coaches** | One page for adding, updating and deleting coaches. **To add:** fill in the blank form (name, phone, sport — Badminton, Futsal, Tennis, Squash, Swimming or Yoga — hourly rate RM 1–500, commission 0–100 %) and click **Add Coach**. **To update:** click the coach's row (it turns green), change the details, click **Save Changes** (changing the sport also changes their upcoming classes); **New** goes back to a blank form. **To delete:** click **Delete** beside the coach — only possible once none of their classes are left on record. |
-| **Schedule Class** | Pick the coach, Private or Group, date, start time and duration (1–4 hours), type max people and the fee per person, **Schedule Class**. A private session is always for 1 person; a group takes up to 30. |
-| **Update Class** | Click an upcoming class, change date, time, duration, max people or fee, **Save Changes**. |
-| **Cancel Class** | Click the class, **Cancel Class**. |
+| **Manage Classes** | One page for scheduling, updating and deleting classes. **To schedule:** with nothing clicked, pick the coach, Private or Group, date, start time and duration (1–4 hours), type max people and the fee per person, click **Schedule Class** (a private session is always for 1 person; a group takes up to 30). **To update:** click the class's row, change date, time, duration, max people or fee (coach and type can't change), click **Save Changes**. **To delete:** click **Delete** beside the class. Type a Coach ID and click Search to see one coach's classes. |
 | **Enrol Member** | Click an upcoming class that still has space, pick the member, **Enrol**. |
 | **Remove Member** | Each row is one member in one class. Click the row, **Remove**. |
 | **Hours & Commission** | Classes, hours and commission per coach, for all time or one month, plus a total. Commission = fee per person × people enrolled × the coach's %. |

@@ -27,13 +27,12 @@
 ## Module 2 - Membership Registration
 1. **Register:** name, phone, click a membership card, click Register.
    - **Screenshot:** cards with one selected.
-2. **Update Member:** click a member, edit, Save Changes.
-3. **Renew Membership:** click a member, Renew.
-4. **Delete Member:** click a member, Delete (blocked with an upcoming
-   booking or unpaid bill).
+2. **Manage Members:** click a member to edit them and click Save
+   Changes; click Delete beside a member to remove them (blocked with an
+   upcoming booking or unpaid bill).
+   - **Screenshot:** a member row highlighted while being edited.
    - **Screenshot:** delete-blocked message.
-5. **View Members:** list with status and the summary line.
-   - **Screenshot:** View Members.
+3. **Renew Membership:** click a member, Renew.
 
 ## Module 3 - Coaching & Class Management
 1. **Manage Coaches:** fill the blank form and click Add Coach; click a
@@ -41,15 +40,14 @@
    a coach to remove them.
    - **Screenshot:** "Please enter a valid number" message for a bad rate.
    - **Screenshot:** a coach row highlighted while being edited.
-2. **Schedule Class:** coach, Private/Group, date, time, duration, max
-   people, fee, click Schedule Class.
-   - **Screenshot:** Schedule Class form.
-3. **Update Class** / **Cancel Class:** click a class, then Save Changes
-   or Cancel Class.
-4. **Enrol Member:** click a class, pick a member, Enrol.
-5. **Remove Member:** click a class/member row, Remove.
+2. **Manage Classes:** with nothing clicked, fill the form and click
+   Schedule Class; click a class's row to edit it and click Save
+   Changes; click Delete beside a class to cancel it.
+   - **Screenshot:** Manage Classes with a class being edited.
+3. **Enrol Member:** click a class, pick a member, Enrol.
+4. **Remove Member:** click a class/member row, Remove.
    - **Screenshot:** Remove Member page.
-6. **Hours & Commission:** pick a month or All time.
+5. **Hours & Commission:** pick a month or All time.
    - **Screenshot:** hours and commission table.
 
 ## Module 4 - Billing, Payments & Finance

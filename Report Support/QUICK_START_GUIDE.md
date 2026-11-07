@@ -15,6 +15,10 @@ Needs Python 3.10+. No installs needed.
    right.
 4. **← Back** (or clicking the tab again) returns to the actions.
 
+**Manage pages** (Manage Coaches, Manage Classes, Manage Members): click a
+row to edit it, **Delete** sits beside each row, and a blank form adds
+a new one.
+
 Dates: type `YYYY-MM-DD` or click 📅. Red buttons are permanent and
 always ask first.
 
@@ -23,8 +27,8 @@ always ask first.
 | Tab | Actions |
 |---|---|
 | **Booking** | Book a Court · Cancel a Booking · Delete a Booking |
-| **Membership** | Register · Update Member · Renew Membership · Delete Member · View Members |
-| **Coaching** | Manage Coaches · Schedule Class · Update Class · Cancel Class · Enrol Member · Remove Member · Hours & Commission |
+| **Membership** | Register · Manage Members · Renew Membership |
+| **Coaching** | Manage Coaches · Manage Classes · Enrol Member · Remove Member · Hours & Commission |
 | **Billing** | Create Bill · Pay Bill · Void Bill · Delete Bill · View Receipt · Daily Revenue |
 
 ## Try it in a minute

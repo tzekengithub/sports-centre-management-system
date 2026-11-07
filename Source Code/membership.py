@@ -314,20 +314,16 @@ def member_status(member):
 #
 # The tab opens on a menu asking "What would you like to do?". Each
 # action has its own one-page screen with a Back button: Register,
-# Update Member, Renew Membership, Delete Member, View Members.
+# Manage Members (update and delete on one page), Renew Membership.
 # ---------------------------------------------------------------------------
 MEMBERSHIP_ACTIONS = [
     ("Register", "Sign up a new member",
      "Type the name and phone, click the membership type they want, then click Register."),
-    ("Update Member", "Change name, phone or type",
-     "Click the member, change their details on the right, then click Save Changes."),
+    ("Manage Members", "See, update or delete members",
+     "Click a member to update them, then Save Changes. Click Delete beside a member to remove "
+     "them (not allowed with an upcoming booking or unpaid bill)."),
     ("Renew Membership", "Extend a membership",
      "Click the member, then click Renew. The membership is extended from today."),
-    ("Delete Member", "Remove a member",
-     "Click the member, then click Delete. Not allowed while they have an upcoming booking "
-     "or an unpaid bill."),
-    ("View Members", "See everyone and expiry dates",
-     "Type part of a name and click Search, or leave it empty to see everyone."),
 ]
 
 MEMBER_LIST_HEADER = f"{'ID':<8}{'Name':<20}{'Type':<14}{'Expires':<11}{'Status':<8}"
@@ -345,18 +341,10 @@ def build_membership_tab(parent):
     window = tk.Frame(parent, bg=common.APP_BG)
     page_frames, page_hooks = common.build_action_menu(window, "Membership Registration", MEMBERSHIP_ACTIONS)
     build_register_page(page_frames["Register"], page_hooks)
-    page_hooks["Update Member"] = build_update_page(page_frames["Update Member"])
+    build_manage_members_page(page_frames["Manage Members"], page_hooks)
     page_hooks["Renew Membership"] = common.build_pick_page(
         page_frames["Renew Membership"], MEMBER_LIST_HEADER, member_rows, "Renew", renew_action,
         describe=describe_member, search_label="Name", empty_text="No members yet.")
-    page_hooks["Delete Member"] = common.build_pick_page(
-        page_frames["Delete Member"], MEMBER_LIST_HEADER, member_rows, "Delete", delete_action,
-        describe=describe_member, confirm_text=delete_question, danger=True,
-        search_label="Name", empty_text="No members yet.")
-    page_hooks["View Members"] = common.build_pick_page(
-        page_frames["View Members"], MEMBER_LIST_HEADER, member_rows, None, None,
-        describe=describe_member, search_label="Name", summary_text=members_summary,
-        empty_text="No members yet.")
     return window
 
 
@@ -405,7 +393,7 @@ def delete_question(member_id):
 
 
 def members_summary():
-    """One line under the View Members list: total (counted recursively),
+    """One line under the Manage Members list: total (counted recursively),
     members per type, and how many expire within 30 days."""
     all_members = load_all_members()
     type_counts = count_members_by_type(all_members)
@@ -418,47 +406,52 @@ def members_summary():
             f"{expiring_count} expiring in the next 30 days.")
 
 
-def build_update_page(page_frame):
-    """Build the Update Member page and return its refresh function."""
-    form_widgets = {}
+def build_manage_members_page(page_frame, page_hooks):
+    """Build the Manage Members page: every member listed with a Delete
+    button beside each row; clicking a row loads that member into the
+    form for updating. New members are added with Register (the cards)."""
+    fields = {}
 
     def build_form(form_frame):
-        """Add the name, phone and type fields."""
-        form_widgets["name"] = common.make_entry(form_frame, width=22)
-        common.add_form_row(form_frame, 0, "Name", form_widgets["name"])
-        form_widgets["phone"] = common.make_entry(form_frame, width=22)
-        common.add_form_row(form_frame, 1, "Phone", form_widgets["phone"])
-        form_widgets["type"] = tk.StringVar(value=common.MEMBERSHIP_TYPES[0])
+        """Add the name, phone and type fields, plus a line for the dates."""
+        fields["name"] = common.make_entry(form_frame, width=22)
+        common.add_form_row(form_frame, 0, "Name", fields["name"])
+        fields["phone"] = common.make_entry(form_frame, width=22)
+        common.add_form_row(form_frame, 1, "Phone", fields["phone"])
+        fields["type"] = tk.StringVar(value=common.MEMBERSHIP_TYPES[0])
         common.add_form_row(form_frame, 2, "Type", common.make_option_menu(
-            form_frame, form_widgets["type"], list(common.MEMBERSHIP_TYPES), width=18))
+            form_frame, fields["type"], list(common.MEMBERSHIP_TYPES), width=18))
+        fields["dates"] = tk.Label(form_frame, text="", font=common.SMALL_FONT, bg=common.PANEL_BG,
+                                   fg=common.MUTED_TEXT_COLOR, justify="left")
+        fields["dates"].grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+    def clear_form():
+        """Empty the fields."""
+        fields["name"].delete(0, tk.END)
+        fields["phone"].delete(0, tk.END)
+        fields["type"].set(common.MEMBERSHIP_TYPES[0])
+        fields["dates"].config(text="")
 
     def fill_form(member_id):
-        """Put the picked member's current details into the fields."""
+        """Load the clicked member (found with the while loop)."""
         member = find_member_by_id(load_all_members(), member_id)
         if member is None:
             return
-        form_widgets["name"].delete(0, tk.END)
-        form_widgets["name"].insert(0, member.get_name())
-        form_widgets["phone"].delete(0, tk.END)
-        form_widgets["phone"].insert(0, member.get_phone())
-        form_widgets["type"].set(member.get_membership_type())
+        fields["name"].insert(0, member.get_name())
+        fields["phone"].insert(0, member.get_phone())
+        fields["type"].set(member.get_membership_type())
+        fields["dates"].config(text=(f"Joined {member.get_join_date()}\n"
+                                     f"Expires {member.get_expiry_date()} ({member_status(member)})"))
 
     def save_action(member_id):
-        """Save the edited details."""
-        update_member(member_id, form_widgets["name"].get(), form_widgets["phone"].get(),
-                      form_widgets["type"].get())
+        """Save the edited name, phone and type."""
+        update_member(member_id, fields["name"].get(), fields["phone"].get(), fields["type"].get())
         return f"Member {member_id} saved."
 
-    def short_description(member_id):
-        """Just the ID and expiry above the form."""
-        member = find_member_by_id(load_all_members(), member_id)
-        if member is None:
-            return "This member no longer exists."
-        return f"{member_id}   expires {member.get_expiry_date()}"
-
-    return common.build_pick_page(page_frame, MEMBER_LIST_HEADER, member_rows, "Save Changes", save_action,
-                                  describe=short_description, build_form=build_form, fill_form=fill_form,
-                                  search_label="Name", empty_text="No members yet.")
+    page_hooks["Manage Members"] = common.build_manage_page(
+        page_frame, MEMBER_LIST_HEADER, member_rows, "member", build_form, clear_form, fill_form,
+        save_action, delete_action, delete_question, add_label=None, search_label="Name",
+        summary_text=members_summary, empty_text="No members found.")
 
 
 def build_register_page(section_frame, page_hooks):

@@ -11,7 +11,7 @@ that read/write the data files and `raise ValueError` on bad input) and a
 
 - `common.build_action_menu(window, title, action_list)` draws the tab's
   "What would you like to do?" menu: one big button per action (e.g.
-  Register, Update Member, Delete Member). Each action gets its **own
+  Register, Manage Members, Renew Membership). Each action gets its **own
   page** with a Back button, its name and one line of instructions. It
   returns `(page_frames, page_hooks)`; a function in
   `page_hooks[action_name]` refreshes that page every time it opens.
@@ -22,9 +22,18 @@ that read/write the data files and `raise ValueError` on bad input) and a
   text), `action_function` (the work; returns a message or raises
   `ValueError`), and optionally a form (`build_form` / `fill_form`), a
   confirmation question and a summary line under the list.
-- Pages that are really a form (Register, Manage Coaches, Schedule Class,
-  Create Bill) or a picture (Book a Court grid, Hours & Commission,
-  Daily Revenue) are built by their own `build_..._page` function.
+- Add / update / delete for one kind of record is ONE page built by
+  `common.build_manage_page(...)` (Manage Coaches, Manage Classes,
+  Manage Members): each list row has its own red Delete button beside
+  it (rows are widgets in `common.build_scroll_area`, since a Listbox
+  cannot hold buttons); clicking a row loads it into the form (the row
+  is highlighted) and the button becomes Save Changes; a blank form adds
+  a new record when the page offers adding. The module supplies
+  `load_rows`, `build_form`, `clear_form`, `fill_form`, `save_action`
+  (record ID `None` means add), `delete_action` and `delete_question`.
+- Pages that are really a form (Register, Create Bill) or a picture
+  (Book a Court grid, Hours & Commission, Daily Revenue) are built by
+  their own `build_..._page` function.
 
 ## common.py (Shared)
 - `centre_window(window, width, height)` - positions a tkinter window in
@@ -82,15 +91,16 @@ Logic:
 - `count_members_by_type` (dict), `members_expiring_within`,
   `count_members_recursive` (recursion) - shown in the Members summary line.
 
-GUI (`build_membership_tab`) - menu of 5 actions, one page each:
+GUI (`build_membership_tab`) - menu of 3 actions, one page each:
 - **Register** - name + phone, click a membership-type card (fee, length,
   discount), click Register.
-- **Update Member** - pick a member, edit name/phone/type, Save Changes.
-- **Renew Membership** - pick a member, Renew.
-- **Delete Member** - pick a member, Delete (confirm first).
-- **View Members** - list + search, no button; summary line uses
-  `count_members_recursive`, `count_members_by_type`,
+- **Manage Members** (`build_manage_members_page`, on
+  `common.build_manage_page`) - every member with a Delete button beside
+  the row; click a row to edit name/phone/type and Save Changes. No add
+  mode here: new members come from Register. The summary line under the
+  list uses `count_members_recursive`, `count_members_by_type` and
   `members_expiring_within`.
+- **Renew Membership** - pick a member, Renew.
 - Helpers: `member_rows` (uses `search_members`), `describe_member` (uses
   the while-loop `find_member_by_id`), `renew_action`, `delete_action`.
 
@@ -122,17 +132,15 @@ Logic:
   of coach -> hours for one month, or all time), `calculate_commission`,
   `total_commission_recursive` (recursion).
 
-GUI (`build_coaching_tab`) - menu of 7 actions, one page each:
-- **Manage Coaches** (`build_manage_coaches_page`) - add, update and
-  delete on one page. The list is made of row widgets inside
-  `common.build_scroll_area` (a Listbox cannot hold buttons), each row
-  with its own red Delete button. A blank form means Add Coach;
-  clicking a row loads that coach (highlighted) and the button becomes
-  Save Changes; New empties every field again.
-- **Schedule Class** - one form, one button. Private locks Max people at
-  1 (`apply_class_type`, a `match`). Time and duration are drop-downs.
-- **Update Class** - pick, edit the form, Save Changes.
-- **Cancel Class** - pick, confirm, done.
+GUI (`build_coaching_tab`) - menu of 5 actions, one page each:
+- **Manage Coaches** (`build_manage_coaches_page`) and **Manage Classes**
+  (`build_manage_classes_page`), both on `common.build_manage_page`: a
+  blank form adds (Add Coach / Schedule Class), clicking a row loads it
+  for Save Changes, Delete beside a row removes it (a coach only once
+  no classes are left). New empties every field again. On an existing
+  class the coach and type are locked; Private locks Max people at 1
+  (`apply_class_type`, a `match`). Time and duration are drop-downs.
+  The class search box takes a coach ID (`search_classes`).
 - **Enrol Member** - pick an upcoming class with space, pick the member
   (only people not already in it are offered), Enrol.
 - **Remove Member** - each row is one member in one class (row ID

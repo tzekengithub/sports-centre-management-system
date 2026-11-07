@@ -122,12 +122,24 @@ workflow rules. "Actual" is what really happened, not a guess.
 | MC-04 | Delete beside a coach with classes | Delete on CCH001's row | Blocked: "... Cancel those classes first." | Exactly so | PASS |
 | MC-05 | Delete beside a coach without classes | Delete on CCH003's row | Deleted; row disappears | Only CCH001 and CCH002 left | PASS |
 
+## Manage Classes and Manage Members pages (Entry 19)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| MC-06 | Blank form schedules a class | date 20 days ahead, max people 0 then 5, fee 30 | 0 -> "Max people must be between 1 and 30."; 5 -> CLS003 scheduled | Exactly so | PASS |
+| MC-07 | Clicking a class row loads it, coach and type locked | click CLS003 | Date, max people and fee filled; coach drop-down and both type buttons disabled | Exactly so | PASS |
+| MC-08 | Save and Delete a class | fee 30 -> 35, Save Changes; Delete on its row | "Class CLS003 saved." then "Class CLS003 deleted." | Exactly so | PASS |
+| MC-09 | Manage Members starts with no form | open the page | Only the search box shown; title "Click a member to edit them" | Exactly so | PASS |
+| MC-10 | Edit a member with a bad phone | click Siti, phone 12345, Save Changes | "Phone must be 10-11 digits and start with 01." | Exactly so | PASS |
+| MC-11 | Delete beside a member | Ahmad Faiz (upcoming booking) / a new member with nothing outstanding | Blocked / deleted | Both correct | PASS |
+| MC-12 | Summary under the member list | open Manage Members | Total, members per type, expiring in 30 days | "5 members (Annual 2, Monthly 1, Pay-As-You-Go 1, VIP 1). 2 expiring in the next 30 days." | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |
 |---|---|---|---|---|---|
 | TAB-01 | Switch to every tab in turn | click Booking, Membership, Coaching, Billing, Home | Content area shows exactly one frame, the right module; no extra window opens; clicked tab highlighted | One frame each time, 0 extra windows | PASS |
-| TAB-02 | Every tab opens on its action menu; every action opens its own page | all 21 actions in the four tabs | Menu shows one button per action; each page has Back, its name, one instruction line and one main button | All 23 pages correct (screenshots taken) | PASS |
+| TAB-02 | Every tab opens on its action menu; every action opens its own page | all 17 actions in the four tabs | Menu shows one button per action; each page has Back, its name, one instruction line and one main button | All 23 pages correct (screenshots taken) | PASS |
 | TAB-03 | Date picker opened from inside a tab | Booking, Coaching Classes, Billing Daily Revenue calendar buttons | Pop-up opens; picking a day refreshes the grid / revenue straight away | Opened, no error | PASS |
 | TAB-04 | Typing a date without pressing Enter | type a new date in Booking's date box | Grid switches to that date as soon as the date is complete | Redrawn (found as a bug during testing and fixed) | PASS |
 | TAB-05 | Every button on every action page, blank and with a row picked | 84 button clicks | No uncaught exception | None raised | PASS |

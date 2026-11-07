@@ -441,6 +441,25 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   exception; see MC-01 to MC-05 in `TEST_CASES.md`. Data restored
   afterward.
 
+## Entry 19 - Same one-page add/update/delete for classes and members
+- **Asked:** Use the Manage Coaches pattern for classes and members too.
+- **Produced:** The Manage Coaches page became a shared helper,
+  `common.build_manage_page`, used by three pages:
+  - Manage Coaches (unchanged behaviour, now on the helper).
+  - Manage Classes replaces Schedule / Update / Cancel Class: a blank
+    form schedules, clicking a row loads it (coach and type locked),
+    Delete beside a row cancels it; search by coach ID.
+  - Manage Members replaces Update Member / Delete Member / View
+    Members: click a row to edit, Delete beside each row, and the
+    member summary line under the list. Register keeps its own page
+    for the membership cards, so this page has no add mode.
+  Coaching now has 5 actions and Membership 3. No logic-layer changes.
+- **Verify:** MC-06 to MC-12 in `TEST_CASES.md` run on the real
+  program, plus the earlier coach cases again and an 86-click
+  blank-input run: no exception. Screenshots could not be taken this
+  time because the screen was off (they came out black), so check the
+  two new pages by eye once. Data restored afterward.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their
