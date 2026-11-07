@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets / environment
+.env
+.env.*
+
+# Runtime data: created automatically (with sample records) by
+# common.ensure_data_files_exist(), and may hold real member details
+Source Code/data/
+
+# Editor / OS / tool clutter
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
