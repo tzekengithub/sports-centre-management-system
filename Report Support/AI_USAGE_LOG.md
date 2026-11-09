@@ -545,6 +545,50 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   no exception; docstring, match/while, import and undefined-name
   checks pass. The screen was off, so no screenshots.
 
+## Entry 23 - Tester's second round (B1-B16, G1-G11)
+- **Asked:** A tester's list of bugs (B1-B16) and likely GUI problems
+  (G1-G11), each with a suggested fix.
+- **Produced:**
+  - IDs: the highest IDs already in the files (sample data included)
+    are learnt at start-up and before every rewrite; the counter is
+    saved before a record (B1, B16).
+  - Classes: a class with a bill can't be deleted, and the delete
+    question lists enrolled members (B1, B4); a class that is over can
+    still have its fee/size/duration fixed (B2); enrolling is refused
+    once a class has started, for an expired membership, or for a time
+    clash with another class (B3, B5, B6); a private session is saved
+    with its member in one write (B9).
+  - Members in an upcoming class can't be deleted (B7).
+  - Hours & Commission counts only finished classes and adds Pay =
+    hours x hourly rate, with upcoming hours shown apart (B8).
+  - Coaches: changing sport asks first with class counts (B11); a
+    coach with only past classes becomes INACTIVE instead of being
+    blocked (B12, G10); `update_coach` writes classes first and undoes
+    them if the coach can't be saved (B15).
+  - coaching.py: the unused `show_problem` was removed; `messagebox` is
+    now used for the sport question; a visible `try/except OSError` is
+    in `update_coach`; `SportsClass` now has private attributes with
+    getters/setters (B13, B14).
+  - GUI: wrapping instructions (G1); window 1000 px and the form card
+    packed before the list (G2); drop-downs with a Find box and names
+    cut with ... (G3, G4); new class dated tomorrow (G5); past classes
+    greyed (G6); calendar opens on the typed month with past days
+    disabled where they can't be used (G7); mouse wheel on the lists
+    (G8); details wrap instead of cutting (G9); delete questions name
+    the record (G11).
+- **Not changed:** B14's file-processing point. coaching.py reads and
+  writes its files through the shared `common` helpers, the same as
+  booking.py and membership.py; whether the marker wants `open()` in
+  each module file is a question for the group.
+- **Caught while testing:** my first patch script cut functions in the
+  wrong place (a regex matched at the start of a slice); caught by the
+  compile check, restored from git and re-applied. Manage Classes
+  measured 1025 px, so the Find box there was moved under its
+  drop-down (995 px).
+- **Verify:** B1-01 to B-ALL in `TEST_CASES.md`: 27 logic checks and 18
+  GUI checks pass, crash run 107 clicks with no exception. The screen
+  was off, so no screenshots; widths are measured, not looked at.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

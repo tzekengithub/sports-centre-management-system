@@ -90,8 +90,21 @@ that read/write the data files and `raise ValueError` on bad input) and a
   `make_option_menu` + `set_option_menu_choices` (drop-downs whose
   choices can be reloaded), `build_list_panel`, `build_scroll_area`
   (scrolling list of row widgets), `selected_index`.
-- `open_date_picker(parent, target_entry, on_picked=None)` - calendar
-  pop-up; `on_picked` lets a screen refresh as soon as a day is clicked.
+- `open_date_picker(parent, target_entry, on_picked=None, allow_past=True)`
+  - calendar pop-up; `on_picked` lets a screen refresh as soon as a day
+  is clicked. It opens on the month already typed in the box, and with
+  `allow_past=False` (booking, classes) past days are grey and disabled.
+- `make_filtered_menu(parent, variable, width, tip, command, stacked)` -
+  a drop-down with a Find box: typing shortens the list (useful with
+  100+ members). Long choices are cut with "…" to fit.
+- `build_scroll_area` scrolls with the mouse wheel while the pointer is
+  over it (`<MouseWheel>`, and Button-4/5 on Linux).
+- `build_manage_page` greys out rows marked "past", and a
+  `save_action` that returns None (the user said No) saves nothing.
+- `remember_highest_ids(lines)` - saves the highest ID per prefix in
+  `data/id_counters.txt`; run at start-up and before every rewrite, so
+  sample-data IDs are never reused either. `append_line` saves the
+  counter before the record.
 - Constants: `SPORTS` (court sports with courts/rate), `COACHING_SPORTS`
   (court sports plus Swimming and Yoga, which need no court),
   `BILL_CATEGORY_NAMES` (on-screen names for the four bill categories).
@@ -131,16 +144,34 @@ Logic:
 - `class Coach(Person)` - adds coach ID, sport (from `COACHING_SPORTS`),
   hourly rate (RM 1-500) and commission (0-100 %). The setters are written
   as `not (low <= x <= high)` so nan is rejected too.
-- `class SportsClass` - data holder; `get_participant_list()`,
-  `get_time_text()` ("10:00-12:00"), `to_line()`.
+- `class SportsClass` - private attributes (`__class_id`, `__date_text`,
+  `__fee_per_pax`, ...) read with getters and changed with setters
+  (`set_date_text`, `set_participant_list`, ...); `get_time_text()`
+  ("10:00-12:00"), `to_line()`.
+- `class Coach` also has a status, ACTIVE or INACTIVE (`get_status`,
+  `set_status`, `is_active`). Old lines without it load as ACTIVE.
+- `class_has_started`, `class_is_over`, `times_overlap` - time helpers
+  used by enrolling, the lists and the report.
 - `register_coach`, `find_coach_by_id` (while loop), `search_coaches`
   (`match`).
 - `update_coach(...)` - saves the coach; if the sport changed, the coach's
-  **upcoming** classes are moved to the new sport too (past classes keep
-  the sport that was actually taught). Returns how many were changed.
-- `count_classes_for_coach` / `delete_coach` - a coach cannot be removed
-  while any class (past or upcoming) still points to them, so no class
-  is left without its coach.
+  classes that haven't started are moved to the new sport too (past
+  classes keep the sport that was actually taught). The classes file is
+  written first; if saving the coach then fails, a `try/except OSError`
+  puts the classes back and re-raises, so the files never disagree. The
+  page asks first ("N upcoming classes will change, M have members").
+- `classes_for_coach` / `upcoming_classes_for_coach` / `delete_coach` -
+  a coach with upcoming classes can't be removed; one with only past
+  classes is kept as INACTIVE (history stays); one with no classes is
+  deleted. The confirm question names the coach and says which.
+- `member_enrol_problem(...)` - why a member can't join a class: not
+  found, membership ends before the class day, or already in another
+  class at an overlapping time. Used by `enrol_participant` and by
+  `schedule_class(..., member_id)`, which saves a private session with
+  its member in one write. `members_valid_on(date)` fills the member
+  drop-downs.
+- `class_bill_id` / `cancel_class` - a class with a bill that isn't
+  VOID can't be deleted; the confirm question lists enrolled members.
 - `coach_phone_in_use(phone, ignore_coach_id)` - two coaches can't share
   a phone number (checked when adding and when updating).
 - `validate_class_details(...)` - shared checks for scheduling and
@@ -180,7 +211,9 @@ GUI (`build_coaching_tab`) - menu of 5 actions, one page each:
 - **Remove Member** - each row is one member in one class (row ID
   `CLASS;MEMBER`); pick it and Remove.
 - **Hours & Commission** - one row per coach for a month or all time,
-  using `search_classes`, `coach_hours_by_month` and
+  counting only classes that are over (`split_worked_classes`): hours,
+  pay (hours × hourly rate), commission, and upcoming hours shown
+  separately. Uses `search_classes`, `coach_hours_by_month` and
   `total_commission_recursive`.
 
 ## booking.py (Teh Tze Ken)

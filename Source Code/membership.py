@@ -158,6 +158,7 @@ def search_members(member_list, search_field, search_text):
 
 BOOKING_FIELD_COUNT = 8
 BILL_FIELD_COUNT = 10
+CLASS_FIELD_COUNT = 10
 
 
 def has_future_confirmed_booking(member_id):
@@ -173,6 +174,22 @@ def has_future_confirmed_booking(member_id):
         if booking_member_id == member_id and booking_status == "CONFIRMED" and booking_date >= today:
             return True
     return False
+
+
+def upcoming_class_for_member(member_id):
+    """Return the ID of a class that hasn't started yet with member_id
+    enrolled, or None. Read straight from classes.txt (membership does not
+    import coaching.py)."""
+    today = common.today_string()
+    for line in common.read_lines(common.CLASSES_FILE):
+        fields = common.split_fields(line, CLASS_FIELD_COUNT)
+        if fields is None or not fields[5].isdigit():
+            continue
+        class_date = fields[4]
+        not_started = class_date > today or (class_date == today and int(fields[5]) > common.current_hour())
+        if not_started and member_id in fields[9].split(";"):
+            return fields[0]
+    return None
 
 
 def has_unpaid_bill(member_id):
@@ -242,6 +259,10 @@ def delete_member(member_id):
         raise ValueError("Cannot delete: member has an upcoming confirmed booking.")
     if has_unpaid_bill(member_id):
         raise ValueError("Cannot delete: member has an unpaid bill.")
+    class_id = upcoming_class_for_member(member_id)
+    if class_id is not None:
+        raise ValueError(f"Cannot delete: member is enrolled in upcoming class {class_id}. "
+                         "Take them out first (Coaching > Remove Member).")
 
     member_list = load_all_members()
     remaining_lines = []
@@ -400,8 +421,11 @@ def delete_action(member_id):
 
 
 def delete_question(member_id):
-    """Confirmation question for deleting a member."""
-    return f"Delete member {member_id} permanently?"
+    """Confirmation question for deleting a member, naming them."""
+    member = find_member_by_id(load_all_members(), member_id)
+    if member is None:
+        return f"Delete member {member_id} permanently?"
+    return f"Delete member {member_id} {member.get_name()} permanently?"
 
 
 def members_summary():

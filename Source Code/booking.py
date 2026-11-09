@@ -442,7 +442,7 @@ def build_book_page(section_frame, page_hooks):
 
     tk.Label(book_bar, text="Member", font=common.LABEL_FONT, bg=common.PANEL_BG).pack(side="left")
     member_variable = tk.StringVar(value="")
-    member_menu = common.make_option_menu(book_bar, member_variable, [], width=24,
+    member_menu, member_dropdown, set_member_choices = common.make_filtered_menu(book_bar, member_variable, width=24,
                                           tip="The member who is booking. Their bill is made later in Billing.")
     member_menu.pack(side="left", padx=(6, 12))
     selection_label = tk.Label(book_bar, text="", font=common.LABEL_FONT, bg=common.PANEL_BG)
@@ -598,7 +598,8 @@ def build_book_page(section_frame, page_hooks):
 
     def on_pick_date():
         """Open the calendar pop-up; redraw the grid once a day is picked."""
-        common.open_date_picker(section_frame, date_entry, on_picked=clear_selection_and_redraw)
+        common.open_date_picker(section_frame, date_entry, on_picked=clear_selection_and_redraw,
+                                allow_past=False)
 
     shown_date = {"text": ""}
 
@@ -673,7 +674,7 @@ def build_book_page(section_frame, page_hooks):
             choice_text = f"{member_id} {member_names[member_id]}"
             member_choice_ids[choice_text] = member_id
             member_choices.append(choice_text)
-        common.set_option_menu_choices(member_menu, member_variable, member_choices)
+        set_member_choices(member_choices)
         highlight_sport()
         draw_grid()
 

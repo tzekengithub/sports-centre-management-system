@@ -727,7 +727,12 @@ def build_create_bill_page(section_frame, page_hooks):
     category_variable = tk.StringVar(value="COURT")
     reference_variable = tk.StringVar(value="")
 
-    member_menu = common.make_option_menu(card, member_variable, [], width=30)
+    def on_member_changed_later(chosen_text):
+        """Pass a member pick on to on_member_changed (defined further down)."""
+        on_member_changed(chosen_text)
+
+    member_menu, member_dropdown, set_member_choices = common.make_filtered_menu(
+        card, member_variable, width=30, command=on_member_changed_later)
     common.add_form_row(card, 0, "Member", member_menu,
                         tip="Who the bill is for. Their membership type sets the discount.")
 
@@ -901,7 +906,7 @@ def build_create_bill_page(section_frame, page_hooks):
             member_choice_ids[choice_text] = member_id
             member_types[member_id] = member_type
             member_choices.append(choice_text)
-        common.set_option_menu_choices(member_menu, member_variable, member_choices, command=on_member_changed)
+        set_member_choices(member_choices)
         show_detail_row()
 
     page_hooks["Create Bill"] = on_show

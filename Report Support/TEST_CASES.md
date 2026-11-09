@@ -181,6 +181,41 @@ workflow rules. "Actual" is what really happened, not a guess.
 | T13-01 | Long names cut | a member named Nurul Aisyah binti Abdullah | List shows the name ending in "…" | Exactly so | PASS |
 | T-ALL | Every button, blank fields | crash run (77 clicks) | No uncaught exception | None raised | PASS |
 
+## Tester's second round B1-B16, G1-G11 (Entry 23)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| B1-01 | Sample IDs learnt at start | fresh data folder | id_counters.txt has CLS 2 | CLS 2 | PASS |
+| B1-02 | Deleted sample ID not reused | counter file removed, delete CLS001, schedule | New class is CLS003 | CLS003 | PASS |
+| B1-03 | Class with a bill can't be deleted | delete CLS002 (bill BIL002) | Refused, names BIL002 | Refused | PASS |
+| B2-01 | Fix a past class's fee | update a class dated yesterday, fee 30 | Saved | Saved | PASS |
+| B2-02 | Can't move a class into the past | change its date to 2 days ago | Refused | Refused | PASS |
+| B3-01 | Class already started today | enrol into a class starting this hour | Refused; class not in the Enrol list | Exactly so | PASS |
+| B4-01 | Delete question lists members | Delete beside CLS001 | Question says 2 members and names them | Exactly so | PASS |
+| B5-01 | Member time clash | enrol MEM002 in two overlapping classes | Second refused, names the first class | Refused | PASS |
+| B6-01 | Expired member | enrol a member whose membership ended yesterday | Refused; not in the member drop-down | Exactly so | PASS |
+| B7-01 | Member in an upcoming class | delete MEM003 (in CLS001) | Refused, names CLS001 | Refused | PASS |
+| B8-01 | Only finished classes count | report with one past and two upcoming classes | Worked = the past class; upcoming hours shown separately; Pay = hours x rate | Exactly so | PASS |
+| B9-01 | Private session, bad member | schedule Private for an expired member | Refused, no empty class saved | Exactly so | PASS |
+| B9-02 | Private session saved in one write | schedule Private for MEM004 | Class saved with MEM004 already in it | Exactly so | PASS |
+| B11-01 | Sport change asks first | change CCH001 to Squash, answer No | Question gives class counts; nothing saved | Exactly so | PASS |
+| B12-01 | Coach with upcoming classes | delete CCH001 | Refused | Refused | PASS |
+| B12-02 | Coach with only past classes | delete after their upcoming class is gone | Kept as INACTIVE; can't be given a new class | Exactly so | PASS |
+| B12-03 | Coach with no classes | add a coach, delete them | Deleted | Deleted | PASS |
+| B12-04 | Old coach lines | coaches.txt with 6 fields | Loaded as ACTIVE | Loaded | PASS |
+| B15-01 | Coach file can't be saved | coaches.txt read-only, change sport | Friendly error; classes.txt unchanged | Exactly so | PASS |
+| B16-01 | Counter can't be saved | id_counters.txt read-only, add coach | Friendly error; coaches.txt unchanged | Exactly so | PASS |
+| G1-01 | Long instructions wrap | open Manage Classes | Instruction text wraps to the window width | Exactly so | PASS |
+| G2-01 | Pages fit the window | measure Manage Coaches/Classes, Enrol, Hours, Book a Court, Create Bill, Manage Members | All at most 1000 px wide (widest 995 px) | Exactly so | PASS |
+| G3-01 | Long names in drop-downs | coach Nurul Izzah binti Abdullah (Swimming) / long member name | Name cut with ..., sport still shown, at most 24 characters | Exactly so | PASS |
+| G4-01 | Find box | type "nurul" next to the Enrol member list | Only the matching member is listed | 1 entry | PASS |
+| G5-01 | New class date | open Manage Classes | Date box shows tomorrow | Exactly so | PASS |
+| G6-01 | Past classes greyed | class dated yesterday | Row shown in the grey past colour; note under the list | Exactly so | PASS |
+| G7-01 | Calendar month and past days | type a date 45 days ahead, open the calendar; then today | Opens on that month; days before today disabled | Exactly so | PASS |
+| G8-01 | Mouse wheel | pointer over a Manage list | Wheel is bound while the pointer is over the list | Bound | PASS |
+| G9-01 | Long details | name of 39 characters in a details panel | Wraps onto a second line, nothing cut | Exactly so | PASS |
+| B-ALL | Every button, blank fields | crash run (107 clicks) | No uncaught exception | None raised | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

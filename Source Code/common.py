@@ -146,7 +146,7 @@ BORDER_COLOR = "#d9dee5"
 FREE_COLOR = "#d8efe0"
 BOOKED_COLOR = "#f3d3d3"
 SELECTED_COLOR = "#f6c453"
-WINDOW_WIDTH = 900
+WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 560
 BUTTON_WIDTH = 10
 FIELD_PAD = 6
@@ -367,6 +367,55 @@ def set_option_menu_choices(menu, variable, choices, command=None):
             variable.set("")
 
 
+def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stacked=False):
+    """A drop-down with a small Find box beside it: typing in the box
+    shortens the list to the choices containing that text (handy with
+    100+ members). Long choices are cut with ... so they fit the menu.
+    Returns (holder_frame, menu, set_choices); call set_choices(list)
+    whenever the data changes. The variable holds the (cut) choice text.
+    stacked True puts the Find box under the menu (for narrow forms)."""
+    holder = tk.Frame(parent, bg=PANEL_BG)
+    menu = make_option_menu(holder, variable, [], command=command, width=width, tip=tip)
+    if stacked:
+        menu.pack(side="top", anchor="w")
+        find_row = tk.Frame(holder, bg=PANEL_BG)
+        find_row.pack(side="top", anchor="w", pady=(2, 0))
+        find_tip = "Type part of a name or ID to shorten the list above."
+    else:
+        menu.pack(side="left")
+        find_row = holder
+        find_tip = "Type part of a name or ID to shorten the list on the left."
+    tk.Label(find_row, text="Find", font=SMALL_FONT, bg=PANEL_BG, fg=MUTED_TEXT_COLOR).pack(side="left", padx=(8, 2))
+    filter_entry = make_entry(find_row, width=8, tip=find_tip)
+    filter_entry.pack(side="left")
+    all_choices = []
+
+    def apply_filter(event=None):
+        """Show only the choices containing the Find text."""
+        filter_text = filter_entry.get().strip().lower()
+        shown_choices = []
+        for choice_text in all_choices:
+            if filter_text in choice_text.lower():
+                shown_choices.append(choice_text)
+        old_choice = variable.get()
+        set_option_menu_choices(menu, variable, shown_choices, command)
+        # If filtering changed the picked choice, tell the page (e.g. Create
+        # Bill reloads that member's bookings).
+        if command is not None and variable.get() != old_choice:
+            command(variable.get())
+
+    def set_choices(choices):
+        """Replace the full list of choices (cut to fit) and clear the Find box."""
+        all_choices.clear()
+        for choice_text in choices:
+            all_choices.append(fit_text(choice_text, width))
+        filter_entry.delete(0, tk.END)
+        apply_filter()
+
+    filter_entry.bind("<KeyRelease>", apply_filter)
+    return holder, menu, set_choices
+
+
 def build_list_panel(parent, header_text, height=14):
     """Build a monospace column-header label above a scrollable list.
     Returns (panel_frame, listbox). The header is a separate label, so
@@ -385,6 +434,13 @@ def build_list_panel(parent, header_text, height=14):
     listbox.pack(side="left", fill="both", expand=True)
     scrollbar.config(command=listbox.yview)
     return panel_frame, listbox
+
+
+def wrap_to_width(event):
+    """Make a label's text wrap at the label's current width (bound to
+    <Configure>, so it follows the window when it is resized)."""
+    if event.width > 50:
+        event.widget.config(wraplength=event.width - 4)
 
 
 def build_action_menu(window, title_text, action_list):
@@ -445,8 +501,12 @@ def build_action_menu(window, title_text, action_list):
                     tip="Go back to the list of actions for this tab.").pack(side="left")
         tk.Label(top_row, text=action_name, font=TITLE_FONT, bg=APP_BG,
                  fg=ACCENT_COLOR).pack(side="left", padx=14)
-        tk.Label(outer_page, text=page_instructions, font=LABEL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
-                 anchor="w", justify="left").pack(side="top", fill="x", padx=16, pady=(4, 10))
+        instructions_label = tk.Label(outer_page, text=page_instructions, font=LABEL_FONT, bg=APP_BG,
+                                      fg=MUTED_TEXT_COLOR, anchor="w", justify="left",
+                                      wraplength=WINDOW_WIDTH - 40)
+        instructions_label.pack(side="top", fill="x", padx=16, pady=(4, 10))
+        # Long instructions wrap onto a second line instead of being cut off.
+        instructions_label.bind("<Configure>", wrap_to_width)
         content_frame = tk.Frame(outer_page, bg=APP_BG)
         content_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 12))
         page_frames[action_name] = content_frame
@@ -475,6 +535,11 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
     pick_state = {"row_id": None}
     row_ids = []
 
+    # The card on the right is packed FIRST: pack hands out space in
+    # order, so the details/button card keeps its full width and only the
+    # list shrinks on a small screen.
+    card = make_card(page_frame)
+    card.pack(side="right", fill="y", padx=(12, 0))
     left_frame = tk.Frame(page_frame, bg=APP_BG)
     left_frame.pack(side="left", fill="both", expand=True)
 
@@ -495,8 +560,6 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
                              anchor="w", justify="left", wraplength=520)
     summary_label.pack(side="top", fill="x", pady=(6, 0))
 
-    card = make_card(page_frame)
-    card.pack(side="right", fill="y", padx=(12, 0))
     # Monospace so the "Label:  value" lines from details_text line up.
     details_label = tk.Label(card, text="", font=MONO_FONT, bg=PANEL_BG, justify="left",
                              anchor="w", width=DETAIL_LABEL_WIDTH + DETAIL_VALUE_WIDTH)
@@ -612,8 +675,38 @@ def build_scroll_area(parent):
         """Stretch the rows to the full width of the area."""
         canvas.itemconfigure(inner_window, width=event.width)
 
+    def on_mouse_wheel(event):
+        """Scroll the rows with the mouse wheel. Windows/macOS send
+        <MouseWheel> with event.delta; Linux sends Button-4 (up) and
+        Button-5 (down) instead."""
+        if not canvas.winfo_exists():
+            return
+        if canvas.yview() == (0.0, 1.0):
+            return
+        if event.num == 4 or event.delta > 0:
+            canvas.yview_scroll(-1, "units")
+        else:
+            canvas.yview_scroll(1, "units")
+
+    def on_pointer_enter(event):
+        """Send the mouse wheel to this list while the pointer is over it."""
+        for wheel_event in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            canvas.bind_all(wheel_event, on_mouse_wheel)
+
+    def on_pointer_leave(event):
+        """Stop sending the wheel here once the pointer has really left
+        (moving onto a row inside the list also fires <Leave>)."""
+        pointer_x, pointer_y = holder.winfo_pointerxy()
+        widget_under_pointer = holder.winfo_containing(pointer_x, pointer_y)
+        if widget_under_pointer is not None and str(widget_under_pointer).startswith(str(holder)):
+            return
+        for wheel_event in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            canvas.unbind_all(wheel_event)
+
     inner_frame.bind("<Configure>", on_inner_resized)
     canvas.bind("<Configure>", on_canvas_resized)
+    holder.bind("<Enter>", on_pointer_enter)
+    holder.bind("<Leave>", on_pointer_leave)
     return inner_frame
 
 
@@ -629,18 +722,26 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         returns to a blank form); without it, the form only appears once
         a row is clicked.
     The module supplies:
-      load_rows(search_text)    -> list of (record_id, row_text)
+      load_rows(search_text)    -> list of (record_id, row_text), or
+                                   (record_id, row_text, "past") to show a
+                                   row greyed out (e.g. a class that is over)
       build_form(form_frame)    -> adds the fields (grid rows from 0)
       clear_form()              -> empties every field
       fill_form(record_id)      -> loads a record into the fields
       save_action(record_id)    -> adds (record_id None) or saves; returns
-                                   a message or raises ValueError
+                                   a message, None if the user cancelled,
+                                   or raises ValueError
       delete_action(record_id)  -> deletes; returns a message or raises
       delete_question(record_id)-> confirmation question
       summary_text()            -> optional line under the list
     Returns the function to put in page_hooks (blank form, fresh list)."""
     page_state = {"editing_id": None}
     row_widgets = {}
+
+    # --- right: the add / update form (packed first so it keeps its
+    # width; only the list on the left shrinks on a small screen) ---
+    card = make_card(page_frame)
+    card.pack(side="right", fill="y", padx=(12, 0))
 
     # --- left: search + one row per record, each with its own Delete ---
     left_frame = tk.Frame(page_frame, bg=APP_BG)
@@ -659,9 +760,6 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
     summary_label.pack(side="bottom", fill="x", pady=(6, 0))
     rows_frame = build_scroll_area(left_frame)
 
-    # --- right: the add / update form ---
-    card = make_card(page_frame)
-    card.pack(side="right", fill="y", padx=(12, 0))
     form_title = tk.Label(card, text="", font=HEADING_FONT, bg=PANEL_BG, fg=ACCENT_COLOR, justify="left")
     form_title.pack(side="top", anchor="w", pady=(0, 8))
     form_frame = tk.Frame(card, bg=PANEL_BG)
@@ -672,11 +770,11 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
     def highlight_row(record_id):
         """Colour the row being edited so it is obvious which one it is."""
         for row_record_id in row_widgets:
+            row_frame, row_label, base_colour = row_widgets[row_record_id]
             if row_record_id == record_id:
                 row_colour = FREE_COLOR
             else:
-                row_colour = PANEL_BG
-            row_frame, row_label = row_widgets[row_record_id]
+                row_colour = base_colour
             row_frame.config(bg=row_colour)
             row_label.config(bg=row_colour)
 
@@ -743,20 +841,28 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         if len(rows) == 0:
             tk.Label(rows_frame, text=empty_text, font=LABEL_FONT, bg=PANEL_BG,
                      fg=MUTED_TEXT_COLOR).pack(side="top", anchor="w", padx=6, pady=6)
-        for record_id, row_text in rows:
-            row_frame = tk.Frame(rows_frame, bg=PANEL_BG, cursor="hand2")
+        for row in rows:
+            record_id = row[0]
+            row_text = row[1]
+            # A "past" row (e.g. a class that is over) is greyed out.
+            is_past = len(row) > 2 and row[2] == "past"
+            if is_past:
+                base_colour, text_colour = PAST_COLOR, MUTED_TEXT_COLOR
+            else:
+                base_colour, text_colour = PANEL_BG, TEXT_COLOR
+            row_frame = tk.Frame(rows_frame, bg=base_colour, cursor="hand2")
             row_frame.pack(side="top", fill="x")
             delete_button = make_button(row_frame, "Delete", make_row_delete(record_id), style="danger",
                                         tip=f"Delete {record_id} permanently. You will be asked to confirm first.")
             delete_button.config(font=SMALL_FONT, padx=8, pady=1)
             delete_button.pack(side="right", padx=4, pady=2)
-            row_label = tk.Label(row_frame, text=row_text, font=MONO_FONT, bg=PANEL_BG,
-                                 anchor="w", cursor="hand2")
+            row_label = tk.Label(row_frame, text=row_text, font=MONO_FONT, bg=base_colour,
+                                 fg=text_colour, anchor="w", cursor="hand2")
             row_label.pack(side="left", fill="x", expand=True, padx=(2, 0))
             row_frame.bind("<Button-1>", make_row_click(record_id))
             row_label.bind("<Button-1>", make_row_click(record_id))
             add_tooltip(row_label, f"Click to load {record_id} into the form and change it.")
-            row_widgets[record_id] = (row_frame, row_label)
+            row_widgets[record_id] = (row_frame, row_label, base_colour)
         highlight_row(page_state["editing_id"])
         if summary_text is not None:
             summary_label.config(text=summary_text())
@@ -767,6 +873,8 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
             message = save_action(page_state["editing_id"])
         except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
+            return
+        if message is None:
             return
         messagebox.showinfo("Saved", message)
         start_new()
@@ -851,19 +959,47 @@ def fit_text(text, width):
 
 
 DETAIL_LABEL_WIDTH = 12
-DETAIL_VALUE_WIDTH = 22
+DETAIL_VALUE_WIDTH = 26
+
+
+def wrap_words(text, width):
+    """Split text into lines of at most width characters, breaking
+    between words (a single word longer than width is cut into pieces)."""
+    lines = []
+    current_line = ""
+    for word in text.split():
+        while len(word) > width:
+            if current_line != "":
+                lines.append(current_line)
+                current_line = ""
+            lines.append(word[:width])
+            word = word[width:]
+        if current_line == "":
+            current_line = word
+        elif len(current_line) + 1 + len(word) <= width:
+            current_line += " " + word
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line != "" or len(lines) == 0:
+        lines.append(current_line)
+    return lines
 
 
 def details_text(label_value_pairs):
     """Turn [("Class ID", "CLS001"), ("Sport", "Tennis"), ...] into neat
     lines like 'Class ID:   CLS001', one per pair, for the details panel.
+    A long value wraps onto extra indented lines, so nothing is cut off.
     A label of "" makes a blank spacer line."""
     lines = []
     for label_text, value in label_value_pairs:
         if label_text == "":
             lines.append("")
-        else:
-            lines.append(f"{label_text + ':':<{DETAIL_LABEL_WIDTH}}{fit_text(str(value), DETAIL_VALUE_WIDTH)}")
+            continue
+        value_lines = wrap_words(str(value), DETAIL_VALUE_WIDTH)
+        lines.append(f"{label_text + ':':<{DETAIL_LABEL_WIDTH}}{value_lines[0]}")
+        for extra_line in value_lines[1:]:
+            lines.append(" " * DETAIL_LABEL_WIDTH + extra_line)
     return "\n".join(lines)
 
 
@@ -897,13 +1033,19 @@ def days_in_month(year, month):
     return (first_of_next_month - first_of_month).days
 
 
-def open_date_picker(parent, target_entry, on_picked=None):
+def open_date_picker(parent, target_entry, on_picked=None, allow_past=True):
     """Open a small calendar pop-up (like a Google Forms date picker).
     Clicking a day fills target_entry with that date as YYYY-MM-DD and
     closes the pop-up; on_picked, if given, is then called so the screen
-    can refresh straight away. Built entirely from plain tkinter widgets."""
+    can refresh straight away. It opens on the month already typed in the
+    box (or this month). With allow_past False, days before today are
+    greyed out and can't be clicked. Built from plain tkinter widgets."""
     today = datetime.now()
     picker_state = {"year": today.year, "month": today.month}
+    if is_valid_date(target_entry.get()):
+        typed_date = parse_date(target_entry.get())
+        picker_state["year"] = typed_date.year
+        picker_state["month"] = typed_date.month
 
     # parent may be a tab's Frame, but transient() needs a real window,
     # so the pop-up is owned by the main window that holds the tab.
@@ -988,13 +1130,20 @@ def open_date_picker(parent, target_entry, on_picked=None):
         column_index = starting_weekday
         for day_value in range(1, total_days + 1):
             is_today = (year == today.year and month == today.month and day_value == today.day)
+            day_text = f"{year:04d}-{month:02d}-{day_value:02d}"
+            is_past_day = (not allow_past) and day_text < today_string()
             if is_today:
                 button_bg = SELECTED_COLOR
+            elif is_past_day:
+                button_bg = PAST_COLOR
             else:
                 button_bg = BUTTON_COLOR
             day_button = tk.Button(days_frame, text=str(day_value), width=4, font=LABEL_FONT,
                                     bg=button_bg, fg=BUTTON_TEXT_COLOR,
+                                    disabledforeground=DISABLED_TEXT_COLOR,
                                     command=make_day_command(year, month, day_value))
+            if is_past_day:
+                day_button.config(state="disabled")
             day_button.grid(row=row_index, column=column_index, padx=1, pady=1)
             column_index += 1
             if column_index > 6:
@@ -1027,6 +1176,11 @@ def ensure_data_files_exist():
         if not os.path.isfile(file_path):
             write_lines(file_path, sample_lines)
             is_first_run = True
+
+    # Remember the highest ID already in every file (sample rows, or rows
+    # typed in by hand), so deleting one of them never frees its ID.
+    for file_path in sample_rows:
+        remember_highest_ids(read_lines(file_path))
 
     return is_first_run
 
@@ -1072,8 +1226,11 @@ def write_lines(file_path, lines):
 
 
 def append_line(file_path, line):
-    """Append a single record line to a text file, then remember its ID
-    as used (so it is never handed out again, even after a delete)."""
+    """Remember the record's ID as used (so it is never handed out again,
+    even after a delete), then append the line to the text file. The
+    counter is saved FIRST: if that fails nothing has been saved yet, so
+    trying again can't create the record twice."""
+    note_used_id(line.split("|")[0])
     try:
         file_handle = open(file_path, "a", encoding=FILE_ENCODING, newline="\n")
     except OSError as error:
@@ -1083,7 +1240,6 @@ def append_line(file_path, line):
             file_handle.write(line + "\n")
         finally:
             file_handle.close()
-    note_used_id(line.split("|")[0])
 
 
 def rewrite_records(file_path, record_lines, line_parser):
@@ -1091,8 +1247,12 @@ def rewrite_records(file_path, record_lines, line_parser):
     could not be read (line_parser returns None for it) at the end,
     unchanged - so a damaged or hand-edited line is never silently
     erased when another record is updated or deleted."""
+    old_lines = read_lines(file_path)
+    # Before anything is removed, remember the highest ID in the file, so
+    # a deleted record's ID can never be given to a new one.
+    remember_highest_ids(old_lines)
     unreadable_lines = []
-    for line in read_lines(file_path):
+    for line in old_lines:
         if line_parser(line) is None:
             unreadable_lines.append(line)
     write_lines(file_path, record_lines + unreadable_lines)
@@ -1111,9 +1271,8 @@ def read_id_counters():
     return counters
 
 
-def note_used_id(record_id):
-    """Record that record_id (e.g. CLS007) has been used, if its number is
-    higher than any used before for that prefix."""
+def split_record_id(record_id):
+    """Split an ID like CLS007 into ("CLS", 7), or None if it isn't one."""
     prefix = ""
     for character in record_id:
         if character.isalpha():
@@ -1122,14 +1281,35 @@ def note_used_id(record_id):
             break
     number_text = record_id[len(prefix):]
     if prefix == "" or not number_text.isdigit():
-        return
+        return None
+    return prefix, int(number_text)
+
+
+def remember_highest_ids(lines):
+    """Save, in id_counters.txt, the highest ID number of each prefix found
+    at the start of these record lines, if it is higher than the one
+    already saved. The file is only written when something changed."""
     counters = read_id_counters()
-    if int(number_text) > counters.get(prefix, 0):
-        counters[prefix] = int(number_text)
+    changed = False
+    for line in lines:
+        id_parts = split_record_id(line.split("|")[0])
+        if id_parts is None:
+            continue
+        prefix, number = id_parts
+        if number > counters.get(prefix, 0):
+            counters[prefix] = number
+            changed = True
+    if changed:
         counter_lines = []
         for counter_prefix in counters:
             counter_lines.append(f"{counter_prefix}|{counters[counter_prefix]}")
         write_lines(ID_COUNTER_FILE, counter_lines)
+
+
+def note_used_id(record_id):
+    """Record that record_id (e.g. CLS007) has been used, if its number is
+    higher than any used before for that prefix."""
+    remember_highest_ids([record_id])
 
 
 def split_fields(line, expected_field_count):
@@ -1293,8 +1473,8 @@ def build_sample_rows():
         "BKG003|MEM003|Tennis|1|" + add_days_to_date(today, 3) + "|9|1|CANCELLED",
     ]
     coach_rows = [
-        "CCH001|Lim Wei|0171234567|Badminton|60.00|30.00",
-        "CCH002|Nurul Izzah|0192223344|Tennis|70.00|25.00",
+        "CCH001|Lim Wei|0171234567|Badminton|60.00|30.00|ACTIVE",
+        "CCH002|Nurul Izzah|0192223344|Tennis|70.00|25.00|ACTIVE",
     ]
     class_rows = [
         "CLS001|CCH001|Badminton|Group|" + add_days_to_date(today, 4) + "|10|1|8|25.00|MEM001;MEM003",
