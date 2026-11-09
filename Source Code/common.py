@@ -109,15 +109,15 @@ THEMES = {
         "DANGER_COLOR": "#8c1c1c", "MUTED_TEXT_COLOR": "#5b6573", "BORDER_COLOR": "#d9dee5",
         "LIST_BORDER_COLOR": "#8a929c", "FREE_COLOR": "#d8efe0", "BOOKED_COLOR": "#f3d3d3",
         "SELECTED_COLOR": "#f6c453", "PAST_COLOR": "#e3e6ea", "DISABLED_TEXT_COLOR": "#9aa3ad",
-        "TOOLTIP_BG": "#fff8dc", "TOOLTIP_TEXT_COLOR": "#2b2b2b",
+        "TOOLTIP_BG": "#fff8dc", "TOOLTIP_TEXT_COLOR": "#2b2b2b", "SELECTED_TEXT_COLOR": "#1f2328",
     },
     "dark": {
         "APP_BG": "#1c2026", "PANEL_BG": "#272c34", "TEXT_COLOR": "#e6e8eb",
         "ACCENT_COLOR": "#7fd1a6", "BUTTON_COLOR": "#2f7d55", "BUTTON_TEXT_COLOR": "#ffffff",
         "DANGER_COLOR": "#b13a3a", "MUTED_TEXT_COLOR": "#a3acb8", "BORDER_COLOR": "#3b424c",
         "LIST_BORDER_COLOR": "#4b535e", "FREE_COLOR": "#245a40", "BOOKED_COLOR": "#6e3030",
-        "SELECTED_COLOR": "#b8892a", "PAST_COLOR": "#353b44", "DISABLED_TEXT_COLOR": "#6c7480",
-        "TOOLTIP_BG": "#3a3f47", "TOOLTIP_TEXT_COLOR": "#f2f2f2",
+        "SELECTED_COLOR": "#e0a83a", "PAST_COLOR": "#353b44", "DISABLED_TEXT_COLOR": "#6c7480",
+        "TOOLTIP_BG": "#3a3f47", "TOOLTIP_TEXT_COLOR": "#f2f2f2", "SELECTED_TEXT_COLOR": "#14171b",
     },
 }
 THEME_NAMES = ("light", "dark")
@@ -146,6 +146,7 @@ BORDER_COLOR = "#d9dee5"
 FREE_COLOR = "#d8efe0"
 BOOKED_COLOR = "#f3d3d3"
 SELECTED_COLOR = "#f6c453"
+SELECTED_TEXT_COLOR = "#1f2328"
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 560
 BUTTON_WIDTH = 10
@@ -165,6 +166,7 @@ def apply_theme(theme_name):
     global APP_BG, PANEL_BG, TEXT_COLOR, ACCENT_COLOR, BUTTON_COLOR, BUTTON_TEXT_COLOR
     global DANGER_COLOR, MUTED_TEXT_COLOR, BORDER_COLOR, LIST_BORDER_COLOR, FREE_COLOR
     global BOOKED_COLOR, SELECTED_COLOR, PAST_COLOR, DISABLED_TEXT_COLOR, TOOLTIP_BG, TOOLTIP_TEXT_COLOR
+    global SELECTED_TEXT_COLOR
     if theme_name not in THEMES:
         theme_name = "light"
     palette = THEMES[theme_name]
@@ -185,6 +187,7 @@ def apply_theme(theme_name):
     DISABLED_TEXT_COLOR = palette["DISABLED_TEXT_COLOR"]
     TOOLTIP_BG = palette["TOOLTIP_BG"]
     TOOLTIP_TEXT_COLOR = palette["TOOLTIP_TEXT_COLOR"]
+    SELECTED_TEXT_COLOR = palette["SELECTED_TEXT_COLOR"]
     current_theme["name"] = theme_name
 
 
@@ -342,10 +345,10 @@ def make_option_menu(parent, variable, choices, command=None, width=22, tip=None
     return menu
 
 
-def set_option_menu_choices(menu, variable, choices, command=None):
+def set_option_menu_choices(menu, variable, choices, command=None, placeholder=None):
     """Replace the choices of an existing drop-down (e.g. after the data
     it lists has changed). Keeps the current value if it is still a
-    choice, otherwise selects the first one."""
+    choice; otherwise shows placeholder (if given) or selects the first."""
     dropdown = menu["menu"]
     dropdown.delete(0, "end")
 
@@ -361,18 +364,28 @@ def set_option_menu_choices(menu, variable, choices, command=None):
     for choice_text in choices:
         dropdown.add_command(label=choice_text, command=make_choice_command(choice_text))
     if variable.get() not in choices:
-        if len(choices) > 0:
+        if placeholder is not None:
+            variable.set(placeholder)
+        elif len(choices) > 0:
             variable.set(choices[0])
         else:
             variable.set("")
 
 
+# Shown in member/coach drop-downs until someone is really picked, so
+# nobody is booked or billed by accident (it is never a real choice).
+CHOOSE_TEXT = "(choose one)"
+
+
 def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stacked=False):
     """A drop-down with a small Find box beside it: typing in the box
     shortens the list to the choices containing that text (handy with
-    100+ members). Long choices are cut with ... so they fit the menu.
+    100+ members). Find searches the FULL text; long choices are shown
+    cut with ... so they fit the menu. Nothing is picked until the user
+    picks (the menu shows CHOOSE_TEXT), unless Find leaves exactly one.
     Returns (holder_frame, menu, set_choices); call set_choices(list)
-    whenever the data changes. The variable holds the (cut) choice text.
+    whenever the data changes. The variable holds the SHOWN (cut) text,
+    so pages key their lookups with fit_text(choice, width).
     stacked True puts the Find box under the menu (for narrow forms)."""
     holder = tk.Frame(parent, bg=PANEL_BG)
     menu = make_option_menu(holder, variable, [], command=command, width=width, tip=tip)
@@ -396,19 +409,22 @@ def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stack
         shown_choices = []
         for choice_text in all_choices:
             if filter_text in choice_text.lower():
-                shown_choices.append(choice_text)
+                shown_choices.append(fit_text(choice_text, width))
         old_choice = variable.get()
-        set_option_menu_choices(menu, variable, shown_choices, command)
+        set_option_menu_choices(menu, variable, shown_choices, command, placeholder=CHOOSE_TEXT)
+        # Find narrowed it to one person: pick them.
+        if filter_text != "" and len(shown_choices) == 1:
+            variable.set(shown_choices[0])
         # If filtering changed the picked choice, tell the page (e.g. Create
         # Bill reloads that member's bookings).
         if command is not None and variable.get() != old_choice:
             command(variable.get())
 
     def set_choices(choices):
-        """Replace the full list of choices (cut to fit) and clear the Find box."""
+        """Replace the full list of choices and clear the Find box."""
         all_choices.clear()
         for choice_text in choices:
-            all_choices.append(fit_text(choice_text, width))
+            all_choices.append(choice_text)
         filter_entry.delete(0, tk.END)
         apply_filter()
 

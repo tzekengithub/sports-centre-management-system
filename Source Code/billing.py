@@ -713,6 +713,9 @@ def build_pay_page(page_frame):
                                   empty_text="No unpaid bills.", result_title="Paid")
 
 
+MEMBER_MENU_WIDTH = 30
+
+
 def build_create_bill_page(section_frame, page_hooks):
     """Build the Create Bill page: member, category, the item being
     billed, a live price preview and a Create Bill button."""
@@ -732,7 +735,7 @@ def build_create_bill_page(section_frame, page_hooks):
         on_member_changed(chosen_text)
 
     member_menu, member_dropdown, set_member_choices = common.make_filtered_menu(
-        card, member_variable, width=30, command=on_member_changed_later)
+        card, member_variable, width=MEMBER_MENU_WIDTH, command=on_member_changed_later)
     common.add_form_row(card, 0, "Member", member_menu,
                         tip="Who the bill is for. Their membership type sets the discount.")
 
@@ -781,8 +784,10 @@ def build_create_bill_page(section_frame, page_hooks):
                 reference_rows = unbilled_classes(member_id)
         elif category == "MEMBERSHIP":
             detail_label.config(text="")
-            member_type = member_types.get(member_id, "")
-            note_label.config(text=f"{member_type} membership fee")
+            if member_id is None:
+                note_label.config(text="Pick a member first.")
+            else:
+                note_label.config(text=f"{member_types.get(member_id, '')} membership fee")
             note_label.grid(row=2, column=1, sticky="w", pady=4)
         else:
             detail_label.config(text="Item")
@@ -794,7 +799,11 @@ def build_create_bill_page(section_frame, page_hooks):
             for reference_id, label in reference_rows:
                 reference_choice_ids[label] = reference_id
                 reference_choices.append(label)
-            if len(reference_choices) == 0:
+            if member_id is None:
+                note_label.config(text="Pick a member first.")
+                note_label.grid(row=2, column=1, sticky="w", pady=4)
+                reference_variable.set("")
+            elif len(reference_choices) == 0:
                 note_label.config(text="Nothing left to bill for this member.")
                 note_label.grid(row=2, column=1, sticky="w", pady=4)
                 reference_variable.set("")
@@ -903,7 +912,8 @@ def build_create_bill_page(section_frame, page_hooks):
         member_choices = []
         for member_id, name, member_type in load_member_choices():
             choice_text = f"{member_id} {name} ({member_type})"
-            member_choice_ids[choice_text] = member_id
+            # The menu shows (and stores) the text cut to its width.
+            member_choice_ids[common.fit_text(choice_text, MEMBER_MENU_WIDTH)] = member_id
             member_types[member_id] = member_type
             member_choices.append(choice_text)
         set_member_choices(member_choices)

@@ -59,11 +59,14 @@ form again).
 
 | Action | What you do |
 |---|---|
-| **Book a Court** | Pick a date and a sport. The grid shows every court (rows) and every 1-hour slot by its start time, 08:00 to 21:00 (columns): green = free, red ✕ = booked, grey = past. Click a free hour; click the next hour on the same court to book longer (click a selected hour again to clear). Pick the member and click **Book**. The bar shows the court, time and price. |
-| **Cancel a Booking** | Click the booking (search by Member ID if needed), then **Cancel Booking**. The court becomes free again. Cancelled bookings are never deleted - they stay on record as CANCELLED so the history is kept. |
+| **Book a Court** | Pick a date and a sport (type the date and press Enter, or use the calendar). The grid shows every court (rows) and every 1-hour slot by its start time, 08:00 to 21:00 (columns): green = free, red ✕ = booked, grey = past. Click a free hour; click the next hour on the same court to book longer (click a selected hour again to clear). Choose the member (type part of a name in **Find** to search) and click **Book**. Only members whose membership is valid on that date are listed. **Save Day Sheet** saves that day's bookings to a text file in `data/day_sheets` for printing. |
+| **Reschedule Booking** | Click an upcoming booking, choose the new date, start time and court, then **Reschedule**. The length and price stay the same. |
+| **Cancel a Booking** | Click the booking (search by member ID or name, booking ID or date), then **Cancel Booking**. The court becomes free again. Cancelled bookings are never deleted - they stay on record as CANCELLED so the history is kept. |
+| **View All Bookings** | Every booking, confirmed and cancelled, past and upcoming. Search by booking ID, member, date (e.g. 2026-11), sport or status; click a row for its details. |
 
-You can't book a time that's taken or in the past. To change a booking's
-time, cancel it and book the new time.
+You can't book a time that's taken or in the past. Bookings that have
+started can't be cancelled or moved. A booking that has a bill can't be
+cancelled or moved until the bill is voided in Billing.
 
 ---
 

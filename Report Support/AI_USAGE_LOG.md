@@ -589,6 +589,37 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   GUI checks pass, crash run 107 clicks with no exception. The screen
   was off, so no screenshots; widths are measured, not looked at.
 
+## Entry 24 - Tester's Booking round (B1-B10, G1-G5, R1-R4)
+- **Asked:** A tester ran the real GUI on the Booking tab and listed
+  bugs (B1-B10), GUI problems (G1-G5) and rubric points (R1-R4).
+- **Produced:**
+  - B1, B2 were caused by Entry 23's drop-down change: menus show text
+    cut to fit, but pages looked it up by the full text. Pages now key
+    their lookups with `fit_text`, Find searches the full text, and
+    member/coach drop-downs start on "(choose one)" instead of the first
+    member (Book a Court, Create Bill, Manage Classes, Enrol).
+  - Booking: Book uses the grid's date and refuses if the box changed
+    without a redraw (B3); members must be valid on the booking date
+    (B4); started bookings can't be cancelled and aren't listed (B5); a
+    billed booking can't be cancelled (B6); list sorting no longer
+    compares Booking objects (B7); redraw on Enter / full date / focus
+    out (B8); opening the page resets it (B9); part-match search on ID,
+    member ID or name, date, sport, status (B10).
+  - GUI: past hours are not counted as free and a past date says so
+    (G1, G5); View All Bookings shows cancelled ones (G2); dark text on
+    the selected cell, new `SELECTED_TEXT_COLOR` (G3); member name in
+    the Cancel list and header matches the rows (G4).
+  - Rubric: Reschedule Booking and View All Bookings pages (R1);
+    `save_day_sheet` in booking.py writes its own file with `open()`,
+    `datetime` and `try/except/else/finally` (R2).
+- **Not changed:** R1's "delete old cancelled records" - the group's
+  rule is that bookings are never deleted. R3 (explaining nested code)
+  is rehearsal. R4: `Booking` still has no parent class; ask the tutor
+  whether inheritance is marked per module.
+- **Verify:** BK1-01 to BK-ALL in `TEST_CASES.md`: 20 logic checks and
+  26 GUI checks pass; Entry 23's 27 + 18 checks still pass; crash run
+  104 clicks, no exception.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

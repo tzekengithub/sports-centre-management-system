@@ -228,18 +228,47 @@ Logic:
 - `count_free_slots_recursive(grid)` - recursion; shown as "N free slots".
 - `find_next_free_hour(grid, hours, court_index)` - while-loop scan; used
   for the "Earliest free" hint above the grid.
-- `create_booking` (rejects past dates and clashes), `cancel_booking`,
-  `search_bookings` (`match`). There is deliberately no delete: a
-  cancelled booking stays on record as CANCELLED, so the history is kept.
+- `load_member_expiry_dates`, `members_valid_on(date)`,
+  `check_member_can_book` - a member whose membership ends before the
+  booking date can't book and isn't in the drop-down.
+- `check_booking_time` - real date, not past, start hour not begun.
+- `create_booking` (time + member + clash checks), `cancel_booking`
+  (refused once the booking has started - `booking_has_started` - or
+  while a non-VOID bill charges for it - `booking_bill_id`),
+  `reschedule_booking` (same length and sport; new date/start/court;
+  clash check ignores the booking itself; refused if billed or started).
+- `search_bookings(list, field, text, member_names)` (`match` on id /
+  member ID or name / date prefix / sport / status, part-matches, no
+  capitals); `search_any_field` combines them for the search boxes.
+- `find_booking_by_id` - while-loop linear search.
+- `day_sheet_text` / `save_day_sheet(date)` - writes
+  `data/day_sheets/bookings_<date>.txt` with `open()`, `datetime` for
+  the "Printed" time, and `try / except OSError / else / finally` (the
+  `finally` always closes the file).
+- There is deliberately no delete: a cancelled booking stays on record
+  as CANCELLED, so the history is kept.
 - `booking_time_text`, `find_booking_at` - small display helpers.
 
-GUI (`build_booking_tab`) - menu of 3 actions, one page each:
+GUI (`build_booking_tab`) - menu of 4 actions, one page each:
 - **Book a Court** (`build_book_page`) - date + sport, a courts x hours
   grid (green free, red booked, grey past), click free hours on one
-  court, pick the member, Book.
-- **Cancel a Booking** (`build_cancel_page`) - pick a confirmed booking
-  and cancel it; it stays on record as CANCELLED.
-  `booking_rows` filters by member with `search_bookings`.
+  court, pick the member, Book. Past hours are marked "Past" in the grid
+  before counting, so "N free slots" and "Earliest free" skip them; a
+  past date says so. The member list shows only members valid on the
+  grid's date and starts on "(choose one)"; Book stays disabled until
+  hours AND a member are chosen. The grid redraws on Enter, on a full
+  10-character date, or when the box loses focus; Book uses the grid's
+  date and refuses if the box was changed without a redraw. Opening the
+  page resets to today. **Save Day Sheet** calls `save_day_sheet`.
+- **Reschedule Booking** (`build_reschedule_page`) - pick an upcoming
+  booking, new date (calendar), start time and court, Reschedule.
+- **Cancel a Booking** (`build_cancel_page`) - pick an upcoming
+  confirmed booking (with the member's name) and cancel it; it stays on
+  record as CANCELLED.
+- **View All Bookings** (`build_view_all_page`) - view-only list of
+  every booking with its status and a count by status.
+  `booking_rows(search, upcoming_only)` builds the lists; it sorts on
+  plain values (date, hour, ID, position), never on Booking objects.
 
 ## billing.py (Low Yee Zhe)
 Logic:

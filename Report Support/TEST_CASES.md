@@ -216,6 +216,32 @@ workflow rules. "Actual" is what really happened, not a guess.
 | G9-01 | Long details | name of 39 characters in a details panel | Wraps onto a second line, nothing cut | Exactly so | PASS |
 | B-ALL | Every button, blank fields | crash run (107 clicks) | No uncaught exception | None raised | PASS |
 
+## Tester's Booking round (Entry 24)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| BK1-01 | Long member name | Find "haziq" (MEM090 Muhammad Haziq bin Abdullah Rahman), pick an hour, Book | Booked for MEM090 | Booked | PASS |
+| BK1-02 | Same in Create Bill | Find "haziq" in Create Bill | Their booking listed, Create Bill enabled | Exactly so | PASS |
+| BK2-01 | Nobody pre-selected | open Book a Court, pick an hour | Member shows "(choose one)", Book disabled | Exactly so | PASS |
+| BK3-01 | Date box changed without redraw | change the box, click Book | Not booked; message, grid redrawn | Exactly so | PASS |
+| BK3-02 | Box left after a change | type a date, focus leaves | Grid shows that date | Exactly so | PASS |
+| BK4-01 | Expired member | book for a member who expired yesterday | Refused; not in the drop-down | Exactly so | PASS |
+| BK4-02 | Booking after expiry | MEM001 (ends in 10 days), date in 400 days | Refused | Refused | PASS |
+| BK5-01 | Past booking | cancel BKG050 dated yesterday | Refused; not in the Cancel list | Exactly so | PASS |
+| BK6-01 | Billed booking | cancel / reschedule a booking with a PAID bill | Refused, names the bill | Exactly so | PASS |
+| BK7-01 | Duplicate booking IDs in the file | two lines BKG060 | Lists still load | No crash | PASS |
+| BK8-01 | Typing a date | 9 characters typed | Grid not redrawn yet | Exactly so | PASS |
+| BK9-01 | Back and reopen | change date, Back, reopen | Today's date, no member picked | Exactly so | PASS |
+| BK10-01 | Partial search | "mem00", a first name, "2026-11" | Matches part of ID / name / date | Exactly so | PASS |
+| BKG1-01 | Free count today | today, after some hours passed | Past hours not counted as free | Exactly so | PASS |
+| BKG5-01 | Past date | yesterday | "has passed, so it can't be booked" | Exactly so | PASS |
+| BKG2-01 | View All | open View All Bookings | Cancelled and past bookings listed with status | Exactly so | PASS |
+| BKG3-01 | Dark mode selected cell | select an hour | ✓ in dark text on amber | Exactly so | PASS |
+| BKG4-01 | Cancel list columns | open Cancel a Booking | Header as wide as rows; member name shown | Exactly so | PASS |
+| BKR1-01 | Reschedule | BKG002 to opening hour; clash; past date; past closing; bad court | Saved; the rest refused, booking unchanged | Exactly so | PASS |
+| BKR2-01 | Day sheet | Save Day Sheet for a day with 2 bookings | File in data/day_sheets lists both, total 3 hours | Exactly so | PASS |
+| BK-ALL | Every button, blank fields | crash run (104 clicks) | No uncaught exception | None raised | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |
