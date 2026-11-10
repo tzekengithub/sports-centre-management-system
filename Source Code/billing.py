@@ -386,7 +386,13 @@ def read_receipt(bill_id):
     receipt_path = os.path.join(common.RECEIPT_FOLDER, bill_id + ".txt")
     if not os.path.isfile(receipt_path):
         return None
-    return "\n".join(common.read_lines(receipt_path))
+    try:
+        receipt_lines = common.read_lines(receipt_path)
+    except OSError as error:
+        # A locked or unreadable receipt gives a plain message, not a crash.
+        raise ValueError(f"Could not read the receipt for {bill_id}: {error.strerror or error}")
+    else:
+        return "\n".join(receipt_lines)
 
 
 def search_bills(bill_list, search_field, search_text):

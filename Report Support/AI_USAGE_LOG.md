@@ -635,6 +635,39 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   older scripts that looked for the old Find box were retired. No
   screenshots (screen off): please look at the list position by eye.
 
+## Entry 26 - Inheritance gap and 16 x 4 rubric check
+- **Asked:** (pasted brief) give Booking an inheritance relationship,
+  prove all 16 rubric rows in every module, fix weak cells, update the
+  README, re-run the tests and clean up.
+- **Produced:**
+  - `common.Record`: a private ID with getter and validating setter,
+    `join_fields()` and an abstract `to_line()`. `Booking` and
+    `SportsClass` inherit it, store their ID with `super().__init__`,
+    return it from their old getters through `get_record_id()`, and build
+    their saved line with the inherited `join_fields()`. File text is
+    identical (checked line by line on the sample files).
+  - Gaps found by scanning each module (not from the old table):
+    membership.py and coaching.py never used `datetime` themselves
+    (added `days_until_expiry` shown as "Days left", `days_until_class`
+    shown beside the class date, each with try/except/else); coaching.py
+    had no function with if/elif/else together (`class_when_text`
+    now has one); billing.py had no `else` (`read_receipt` now has a
+    try/except/else); membership.py had one multi-line comment block
+    (now three).
+  - `RUBRIC_CHECK.md` rebuilt; its function names were checked to exist
+    and its if/elif/else claims against the syntax tree (several old
+    claims were wrong and are corrected). README: run commands for
+    Windows and macOS/Linux, folder layout, and a rubric section.
+- **Not changed / left for the group:** file processing in membership,
+  coaching and billing goes through the shared `common` helpers (listed
+  as a weaker cell in the matrix). A data line with a blank ID is now
+  skipped like any malformed line.
+- **Differences from the brief:** the brief says lambda and
+  comprehensions are allowed; this project's own rule (CLAUDE.md) is to
+  avoid them, and none were added or removed.
+- **Verify:** `TEST_CASES.md` section "Rubric round": 86 logic checks and
+  all earlier GUI suites pass; fresh start from another folder works.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

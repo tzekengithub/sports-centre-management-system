@@ -19,13 +19,14 @@ import common
 # ---------------------------------------------------------------------------
 # CLASS (encapsulation)
 # ---------------------------------------------------------------------------
-class Booking:
-    """A single court booking with private attributes, getters and setters."""
+class Booking(common.Record):
+    """A single court booking with private attributes, getters and setters.
+    It inherits the private ID and the line-building helper from common.Record."""
 
     def __init__(self, booking_id, member_id, sport, court_no, date_text,
                  start_hour, duration_hrs, status):
         """Create the object and validate its starting values."""
-        self.__booking_id = booking_id
+        super().__init__(booking_id)
         self.__member_id = member_id
         self.__sport = ""
         self.__court_no = 0
@@ -41,8 +42,8 @@ class Booking:
         self.set_status(status)
 
     def get_booking_id(self):
-        """Return the booking ID."""
-        return self.__booking_id
+        """Return the booking ID (kept by the parent class, Record)."""
+        return self.get_record_id()
 
     def get_member_id(self):
         """Return the member ID who made the booking."""
@@ -117,8 +118,9 @@ class Booking:
 
     def to_line(self):
         """Turn this booking into a pipe-delimited text-file line."""
-        return "|".join([
-            self.__booking_id, self.__member_id, self.__sport, str(self.__court_no),
+        # The parent's join_fields() puts the ID first and adds the | separators.
+        return self.join_fields([
+            self.__member_id, self.__sport, str(self.__court_no),
             self.__date_text, str(self.__start_hour), str(self.__duration_hrs), self.__status,
         ])
 

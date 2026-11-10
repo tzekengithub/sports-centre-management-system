@@ -1668,6 +1668,38 @@ def build_sample_rows():
 # ---------------------------------------------------------------------------
 # PERSON BASE CLASS (encapsulation + inheritance base)
 # ---------------------------------------------------------------------------
+class Record:
+    """Base class for a stored record that has an ID (a booking, a class).
+    It keeps the ID private with a getter and a validating setter, and
+    builds the first part of every data-file line. Booking (booking.py)
+    and SportsClass (coaching.py) inherit from it and override to_line()."""
+
+    def __init__(self, record_id):
+        """Create the object and validate the ID."""
+        self.__record_id = ""
+        self.set_record_id(record_id)
+
+    def get_record_id(self):
+        """Return the record's ID, e.g. BKG001."""
+        return self.__record_id
+
+    def set_record_id(self, record_id):
+        """Validate and store the ID (not blank, no | or ; characters)."""
+        if record_id.strip() == "" or contains_forbidden_character(record_id):
+            raise ValueError("A record ID can't be blank or contain | or ;.")
+        self.__record_id = record_id.strip()
+
+    def join_fields(self, other_fields):
+        """Return the record's data-file line: its ID first, then the
+        other fields (a list of text), separated by |. Child classes call
+        this from their own to_line()."""
+        return "|".join([self.__record_id] + other_fields)
+
+    def to_line(self):
+        """Child classes must override this to build their own line."""
+        raise NotImplementedError("Child classes must define to_line().")
+
+
 class Person:
     """Base class holding a person's private name and phone number.
     Member (membership.py) and Coach (coaching.py) inherit from this class,

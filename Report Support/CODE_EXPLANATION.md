@@ -114,6 +114,10 @@ that read/write the data files and `raise ValueError` on bad input) and a
   `BILL_CATEGORY_NAMES` (on-screen names for the four bill categories).
 - `class Person` - base class with private `__name`/`__phone`, validating
   getters/setters. `Member` and `Coach` inherit from it.
+- `class Record` - parent of `Booking` and `SportsClass`: a private record
+  ID with `get_record_id` / validating `set_record_id` (not blank, no `|`
+  or `;`), `join_fields(other_fields)` (the first part of every data-file
+  line) and an abstract `to_line()` that raises `NotImplementedError`.
 
 ## membership.py (Teoh Zynn)
 Logic:
@@ -222,8 +226,13 @@ GUI (`build_coaching_tab`) - menu of 5 actions, one page each:
 
 ## booking.py (Teh Tze Ken)
 Logic:
-- `class Booking` - private attributes, each validated in its setter;
-  `get_price()` = rate x duration.
+- `class Booking(common.Record)` - private attributes, each validated in
+  its setter; `get_price()` = rate x duration. The ID lives in the parent
+  class: `super().__init__(booking_id)` stores it, `get_booking_id()`
+  returns the inherited `get_record_id()`, and `to_line()` overrides the
+  parent's `to_line()` and calls the inherited `join_fields()` (ID first,
+  then the other fields, joined with `|`). The text written to
+  bookings.txt is unchanged.
 - `load_all_bookings`, `load_member_names`, `member_exists`.
 - `has_clash(...)` - set intersection of requested vs. existing hours
   (only CONFIRMED bookings count).

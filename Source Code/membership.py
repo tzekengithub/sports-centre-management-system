@@ -8,6 +8,7 @@ Purpose     : Membership Registration module - lets the public register
 Date        : 2026-11-07
 """
 
+import datetime
 import tkinter as tk
 from tkinter import messagebox
 
@@ -238,6 +239,11 @@ def renew_member(member_id):
     updated_lines = []
     new_expiry = None
 
+    # Renewing counts from TODAY, not from the old expiry date, so a member
+    # who renews early does not get the unused days added on top, and one
+    # who lapsed months ago is not charged for the gap.
+    # Every member is written back (changed or not) because the file is
+    # rewritten as a whole.
     for member in member_list:
         if member.get_member_id() == member_id:
             duration_days = MEMBERSHIP_DURATION_DAYS.get(member.get_membership_type(), 365)
@@ -255,6 +261,11 @@ def renew_member(member_id):
 def delete_member(member_id):
     """Delete a member permanently. Blocked if the member has a future
     confirmed booking or an unpaid bill."""
+    # A member may only be removed when nothing else points at them:
+    # no booking still to be used, no bill still to be paid, and no class
+    # still to attend. Otherwise those records would name someone who no
+    # longer exists. The checks read the other modules' files directly
+    # (membership.py does not import booking.py or coaching.py).
     if has_future_confirmed_booking(member_id):
         raise ValueError("Cannot delete: member has an upcoming confirmed booking.")
     if has_unpaid_bill(member_id):
@@ -331,6 +342,28 @@ def duration_text(days):
         return f"{days} days"
 
 
+def days_until_expiry(member):
+    """Return how many days are left on a membership (negative once it has
+    expired), or None if the saved expiry date can't be read. Uses the
+    datetime module directly."""
+    try:
+        expiry = datetime.datetime.strptime(member.get_expiry_date(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    else:
+        return (expiry - datetime.date.today()).days
+
+
+def days_left_text(member):
+    """Words for days_until_expiry, e.g. '12 day(s) left' or 'expired 3 day(s) ago'."""
+    days_left = days_until_expiry(member)
+    if days_left is None:
+        return "unknown"
+    elif days_left < 0:
+        return f"expired {-days_left} day(s) ago"
+    return f"{days_left} day(s) left"
+
+
 def member_status(member):
     """Return 'Active' or 'Expired' by comparing the expiry date to today."""
     if member.get_expiry_date() >= common.today_string():
@@ -404,6 +437,7 @@ def describe_member(member_id):
         ("Type", member.get_membership_type()),
         ("Joined", member.get_join_date()),
         ("Expires", member.get_expiry_date()),
+        ("Days left", days_left_text(member)),
         ("Status", member_status(member)),
     ])
 

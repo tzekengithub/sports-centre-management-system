@@ -242,6 +242,38 @@ workflow rules. "Actual" is what really happened, not a guess.
 | BKR2-01 | Day sheet | Save Day Sheet for a day with 2 bookings | File in data/day_sheets lists both, total 3 hours | Exactly so | PASS |
 | BK-ALL | Every button, blank fields | crash run (104 clicks) | No uncaught exception | None raised | PASS |
 
+## Rubric round: Record parent class and full re-run (Entry 26)
+
+The logic cases of the sections above (MEM, COA, BKG, BIL, GEN, FIX) were
+re-run on 2026-11-10 by one script that imports the real modules on a
+fresh `data/` folder: **86 checks, 0 failed.** The script also covers the
+new cases below. Cases that need real clicks (MEM-12/13, COA-13/14,
+BKG-13/14, BIL-13/14) were not repeated click for click; the pages they
+exercise are covered by the GUI suites (Entries 23-25: 18, 26 and 21
+checks) and by a click-every-button run with blank fields (159 clicks, no
+uncaught exception).
+
+Cases whose **expected result changed** since they were first written
+(the old text above is kept as history):
+
+| Old case | Old expectation | Now |
+|---|---|---|
+| COA-11, FIX-06, MC-04 | a coach with any class is blocked | blocked only with *upcoming* classes; a coach with only past classes becomes INACTIVE (Entry 23, B12) |
+| BKG-06/11 | removed earlier | still removed; bookings can now be rescheduled (Entry 24) |
+| BIL-06 | message quoted as "already paid" | the message reads "This bill has already been paid." (unchanged code, shorthand in the old text) |
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| INH-01 | Booking and SportsClass inherit Record | `issubclass(...)` | Both True | Both True | PASS |
+| INH-02 | Inherited getter | `get_record_id()` and `get_booking_id()` on BKG777 | Both "BKG777" | Both "BKG777" | PASS |
+| INH-03 | Blank ID refused | `Record(" ")` | ValueError "blank" | ValueError | PASS |
+| INH-04 | Parent `to_line` is abstract | `Record("X1").to_line()` | NotImplementedError | Raised | PASS |
+| INH-05 | File text unchanged | every line of the sample bookings.txt and classes.txt loaded then saved with `to_line()`, plus 3 extra lines | Identical text | 0 differences | PASS |
+| INH-06 | Blank ID in a data line | `line_to_booking("\|MEM001\|...")` | Line skipped (None), like other malformed lines | None | PASS |
+| DT-01 | Days left on a membership | MEM002 | A positive number; "N day(s) left" in the details | Exactly so | PASS |
+| DT-02 | Class date offset | class two days ahead | "in 2 day(s)" beside the date | Exactly so | PASS |
+| RC-01 | Fresh start from another folder | delete `data/`, launch `main.py` by full path from the temp folder | Window builds; five data files, id_counters.txt and receipts/ recreated | Exactly so | PASS |
+
 ## Search-as-you-type member box (Entry 25)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

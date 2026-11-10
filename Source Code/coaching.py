@@ -7,6 +7,7 @@ Purpose     : Coaching & Class Management module - assigns coaches to
 Date        : 2026-11-07
 """
 
+import datetime
 import tkinter as tk
 from tkinter import messagebox
 
@@ -294,14 +295,14 @@ def delete_coach(coach_id):
 # ---------------------------------------------------------------------------
 # LOGIC LAYER - CLASSES
 # ---------------------------------------------------------------------------
-class SportsClass:
+class SportsClass(common.Record):
     """A scheduled coaching class. Its details are private attributes
     (encapsulation), read with get_...() and changed with set_...()."""
 
     def __init__(self, class_id, coach_id, sport, class_type, date_text, start_hour,
                  duration_hrs, max_pax, fee_per_pax, participants_text):
         """Create the object with its starting values."""
-        self.__class_id = class_id
+        super().__init__(class_id)
         self.__coach_id = coach_id
         self.__sport = sport
         self.__class_type = class_type
@@ -313,8 +314,8 @@ class SportsClass:
         self.__participants_text = participants_text
 
     def get_class_id(self):
-        """Return the class ID, e.g. CLS001."""
-        return self.__class_id
+        """Return the class ID, e.g. CLS001 (kept by the parent class, Record)."""
+        return self.get_record_id()
 
     def get_coach_id(self):
         """Return the ID of the coach who teaches the class."""
@@ -390,8 +391,9 @@ class SportsClass:
 
     def to_line(self):
         """Turn this class into a pipe-delimited text-file line."""
-        return "|".join([
-            self.__class_id, self.__coach_id, self.__sport, self.__class_type, self.__date_text,
+        # The parent's join_fields() puts the ID first and adds the | separators.
+        return self.join_fields([
+            self.__coach_id, self.__sport, self.__class_type, self.__date_text,
             str(self.__start_hour), str(self.__duration_hrs), str(self.__max_pax),
             f"{self.__fee_per_pax:.2f}", self.__participants_text,
         ])
@@ -924,7 +926,7 @@ def describe_class(class_id):
         ("Class ID", sports_class.get_class_id()),
         ("Sport", sports_class.get_sport()),
         ("Type", sports_class.get_class_type()),
-        ("Date", sports_class.get_date_text()),
+        ("Date", f"{sports_class.get_date_text()} ({class_when_text(sports_class)})"),
         ("Time", sports_class.get_time_text()),
         ("Duration", f"{sports_class.get_duration_hrs()} hour(s)"),
         ("Coach ID", sports_class.get_coach_id()),
@@ -933,6 +935,31 @@ def describe_class(class_id):
         ("Fee", f"RM {sports_class.get_fee_per_pax():.2f} per person"),
         ("Status", class_status_text(sports_class)),
     ])
+
+
+def days_until_class(sports_class):
+    """Return how many days from today a class is on (negative if it was
+    in the past), or None if its saved date can't be read. Uses the
+    datetime module directly."""
+    try:
+        class_day = datetime.datetime.strptime(sports_class.get_date_text(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    else:
+        return (class_day - datetime.date.today()).days
+
+
+def class_when_text(sports_class):
+    """Words for days_until_class, e.g. 'today', 'in 3 day(s)' or '2 day(s) ago'."""
+    days_away = days_until_class(sports_class)
+    if days_away is None:
+        return "unknown"
+    elif days_away == 0:
+        return "today"
+    elif days_away > 0:
+        return f"in {days_away} day(s)"
+    else:
+        return f"{-days_away} day(s) ago"
 
 
 def class_status_text(sports_class):
