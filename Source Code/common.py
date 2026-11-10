@@ -378,58 +378,213 @@ CHOOSE_TEXT = "(choose one)"
 
 
 def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stacked=False):
-    """A drop-down with a small Find box beside it: typing in the box
-    shortens the list to the choices containing that text (handy with
-    100+ members). Find searches the FULL text; long choices are shown
-    cut with ... so they fit the menu. Nothing is picked until the user
-    picks (the menu shows CHOOSE_TEXT), unless Find leaves exactly one.
-    Returns (holder_frame, menu, set_choices); call set_choices(list)
-    whenever the data changes. The variable holds the SHOWN (cut) text,
-    so pages key their lookups with fit_text(choice, width).
-    stacked True puts the Find box under the menu (for narrow forms)."""
+    """A search-as-you-type drop-down (a combo box built from an Entry, a
+    small arrow button and a pop-up list). Click the box and type part of
+    a name or ID: a list of matches drops down to click. Click the arrow
+    to see everyone. Search uses the FULL text; the box shows (and the
+    variable holds) the pick cut with ... to width, so pages key their
+    lookups with fit_text(choice, width). Nothing is picked until the
+    user picks: it starts on CHOOSE_TEXT, and typed text that isn't a
+    real choice goes back to the last real pick when the user leaves.
+    command(shown_text) is called when the pick changes.
+    Returns (holder_frame, entry, set_choices); call set_choices(list)
+    whenever the data changes. stacked is accepted but no longer needed."""
     holder = tk.Frame(parent, bg=PANEL_BG)
-    menu = make_option_menu(holder, variable, [], command=command, width=width, tip=tip)
-    if stacked:
-        menu.pack(side="top", anchor="w")
-        find_row = tk.Frame(holder, bg=PANEL_BG)
-        find_row.pack(side="top", anchor="w", pady=(2, 0))
-        find_tip = "Type part of a name or ID to shorten the list above."
-    else:
-        menu.pack(side="left")
-        find_row = holder
-        find_tip = "Type part of a name or ID to shorten the list on the left."
-    tk.Label(find_row, text="Find", font=SMALL_FONT, bg=PANEL_BG, fg=MUTED_TEXT_COLOR).pack(side="left", padx=(8, 2))
-    filter_entry = make_entry(find_row, width=8, tip=find_tip)
-    filter_entry.pack(side="left")
-    all_choices = []
+    entry = make_entry(holder, width=width,
+                       tip=(tip + " " if tip else "") + "Click and type to search, or click the arrow to see everyone.")
+    entry.config(textvariable=variable)
+    entry.pack(side="left")
+    state = {"full": [], "cut": [], "shown": [], "last_good": CHOOSE_TEXT, "was_valid": False, "popup": None,
+             "list": None}
 
-    def apply_filter(event=None):
-        """Show only the choices containing the Find text."""
-        filter_text = filter_entry.get().strip().lower()
-        shown_choices = []
-        for choice_text in all_choices:
-            if filter_text in choice_text.lower():
-                shown_choices.append(fit_text(choice_text, width))
-        old_choice = variable.get()
-        set_option_menu_choices(menu, variable, shown_choices, command, placeholder=CHOOSE_TEXT)
-        # Find narrowed it to one person: pick them.
-        if filter_text != "" and len(shown_choices) == 1:
-            variable.set(shown_choices[0])
-        # If filtering changed the picked choice, tell the page (e.g. Create
-        # Bill reloads that member's bookings).
-        if command is not None and variable.get() != old_choice:
-            command(variable.get())
+    def is_valid():
+        """Is the box showing one of the real choices?"""
+        return variable.get() in state["cut"]
+
+    def tell_page():
+        """Call the page's command when the pick became valid/invalid."""
+        now_valid = is_valid()
+        if now_valid:
+            state["last_good"] = variable.get()
+        if now_valid != state["was_valid"] or now_valid:
+            state["was_valid"] = now_valid
+            if command is not None:
+                command(variable.get())
+
+    def close_popup():
+        """Hide the pop-up list."""
+        if state["popup"] is not None:
+            state["popup"].destroy()
+            state["popup"] = None
+            state["list"] = None
+
+    def leave_box():
+        """Close the list; text that isn't a real choice goes back to the last pick."""
+        close_popup()
+        if entry.winfo_exists() and not is_valid():
+            variable.set(state["last_good"])
+            tell_page()
+
+    def pick(shown_text):
+        """Choose one entry from the list."""
+        variable.set(shown_text)
+        close_popup()
+        entry.icursor(tk.END)
+        tell_page()
+
+    def on_list_press(event):
+        """Pick the row under the mouse (instead of Tk's own selection)."""
+        index = state["list"].nearest(event.y)
+        if 0 <= index < len(state["shown"]):
+            pick(state["shown"][index])
+        return "break"
+
+    def on_list_motion(event):
+        """Highlight the row under the mouse."""
+        state["list"].selection_clear(0, tk.END)
+        state["list"].selection_set(state["list"].nearest(event.y))
+
+    def show_popup(matches):
+        """Drop the list of matches (pairs of full/cut text) under the box."""
+        close_popup()
+        top = holder.winfo_toplevel()
+        popup = tk.Frame(top, bg=PANEL_BG, highlightbackground=LIST_BORDER_COLOR, highlightthickness=1)
+        scrollbar = tk.Scrollbar(popup)
+        scrollbar.pack(side="right", fill="y")
+        longest = width
+        for full_text, cut_text in matches:
+            longest = max(longest, min(len(full_text), POPUP_MAX_WIDTH))
+        row_count = max(1, min(len(matches), 8))
+        listbox = tk.Listbox(popup, font=ENTRY_FONT, width=longest, height=row_count, activestyle="none",
+                             yscrollcommand=scrollbar.set, selectbackground=BUTTON_COLOR,
+                             selectforeground=BUTTON_TEXT_COLOR, relief="flat", bd=0, exportselection=False)
+        listbox.pack(side="left")
+        scrollbar.config(command=listbox.yview)
+        state["shown"] = []
+        for full_text, cut_text in matches:
+            listbox.insert(tk.END, fit_text(full_text, POPUP_MAX_WIDTH))
+            state["shown"].append(cut_text)
+        if len(matches) == 0:
+            listbox.insert(tk.END, "No match")
+        listbox.bind("<ButtonPress-1>", on_list_press)
+        listbox.bind("<Motion>", on_list_motion)
+        popup.place(x=entry.winfo_rootx() - top.winfo_rootx(),
+                    y=entry.winfo_rooty() - top.winfo_rooty() + entry.winfo_height())
+        popup.lift()
+        state["popup"] = popup
+        state["list"] = listbox
+
+    def matches_for(search_text):
+        """Return (full, cut) pairs whose full text contains search_text."""
+        search_text = search_text.strip().lower()
+        matches = []
+        for index in range(len(state["full"])):
+            if search_text in state["full"][index].lower():
+                matches.append((state["full"][index], state["cut"][index]))
+        return matches
+
+    def on_key(event):
+        """Typing searches; Enter picks the first/highlighted match; Esc closes."""
+        match event.keysym:
+            case "Escape":
+                leave_box()
+            case "Return":
+                if state["popup"] is not None and len(state["shown"]) > 0:
+                    chosen = state["list"].curselection()
+                    if len(chosen) > 0:
+                        pick(state["shown"][chosen[0]])
+                    else:
+                        pick(state["shown"][0])
+            case "Down" | "Up":
+                if state["popup"] is None:
+                    show_popup(matches_for(""))
+                elif len(state["shown"]) > 0:
+                    chosen = state["list"].curselection()
+                    step = 1 if event.keysym == "Down" else -1
+                    index = (chosen[0] + step) % len(state["shown"]) if len(chosen) > 0 else 0
+                    state["list"].selection_clear(0, tk.END)
+                    state["list"].selection_set(index)
+                    state["list"].see(index)
+            case "Tab" | "Shift_L" | "Shift_R" | "Left" | "Right" | "Home" | "End":
+                pass
+            case _:
+                show_popup(matches_for(variable.get()))
+                tell_page()
+
+    def on_focus_in(event):
+        """Clicking the box clears the "(choose one)" hint, or selects the pick so typing replaces it."""
+        if variable.get() == CHOOSE_TEXT:
+            variable.set("")
+        else:
+            entry.select_range(0, tk.END)
+
+    def on_focus_out(event):
+        """Tabbing away: tidy up (after a moment, so a click on the list still counts)."""
+        entry.after(150, check_focus_left)
+
+    def check_focus_left():
+        """Close the list if the box really lost the focus."""
+        if entry.winfo_exists() and entry.focus_get() is not entry:
+            leave_box()
+
+    def on_arrow():
+        """Show or hide the full list of choices."""
+        if state["popup"] is not None:
+            close_popup()
+            return
+        entry.focus_set()
+        show_popup(matches_for(""))
+
+    arrow = make_button(holder, "\u25bc", on_arrow, style="light",
+                        tip="Show everyone in a list, then click one.")
+    arrow.config(padx=6, pady=1)
+    arrow.pack(side="left", padx=(2, 0))
+
+    def on_any_click(event):
+        """A click anywhere else closes the list."""
+        if not entry.winfo_exists() or state["popup"] is None:
+            return
+        clicked = str(event.widget)
+        if clicked.startswith(str(state["popup"])) or clicked == str(entry) or clicked == str(arrow):
+            return
+        leave_box()
+
+    def on_holder_destroyed(event):
+        """The page is going away: remove the pop-up with it."""
+        if event.widget is holder:
+            close_popup()
+
+    def on_entry_hidden(event):
+        """The page was hidden (Back etc.): close the list."""
+        close_popup()
+
+    entry.bind("<KeyRelease>", on_key)
+    entry.bind("<FocusIn>", on_focus_in)
+    entry.bind("<FocusOut>", on_focus_out)
+    entry.bind("<Unmap>", on_entry_hidden)
+    holder.bind("<Destroy>", on_holder_destroyed)
+    holder.winfo_toplevel().bind("<Button-1>", on_any_click, add="+")
 
     def set_choices(choices):
-        """Replace the full list of choices and clear the Find box."""
-        all_choices.clear()
+        """Replace the full list of choices. A pick that is still a choice is kept."""
+        state["full"] = []
+        state["cut"] = []
         for choice_text in choices:
-            all_choices.append(choice_text)
-        filter_entry.delete(0, tk.END)
-        apply_filter()
+            state["full"].append(choice_text)
+            state["cut"].append(fit_text(choice_text, width))
+        close_popup()
+        if variable.get() not in state["cut"]:
+            variable.set(CHOOSE_TEXT)
+            state["last_good"] = CHOOSE_TEXT
+            state["was_valid"] = False
+        else:
+            state["last_good"] = variable.get()
+            state["was_valid"] = True
 
-    filter_entry.bind("<KeyRelease>", apply_filter)
-    return holder, menu, set_choices
+    return holder, entry, set_choices
+
+
+POPUP_MAX_WIDTH = 42
 
 
 def build_list_panel(parent, header_text, height=14):

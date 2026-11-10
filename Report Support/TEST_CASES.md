@@ -242,6 +242,20 @@ workflow rules. "Actual" is what really happened, not a guess.
 | BKR2-01 | Day sheet | Save Day Sheet for a day with 2 bookings | File in data/day_sheets lists both, total 3 hours | Exactly so | PASS |
 | BK-ALL | Every button, blank fields | crash run (104 clicks) | No uncaught exception | None raised | PASS |
 
+## Search-as-you-type member box (Entry 25)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| CB-01 | Starts empty | open Book a Court | Box shows "(choose one)"; no list | Exactly so | PASS |
+| CB-02 | Type to search | click the box, type "haziq" | List drops down with only that member | 1 row | PASS |
+| CB-03 | Click a row | click it | Member picked (name cut with ...), list closes | Exactly so | PASS |
+| CB-04 | Arrow lists everyone | click the arrow; click again | All valid members listed; closes | Exactly so | PASS |
+| CB-05 | No match / Esc | type "zzzz", press Esc | "No match"; box goes back to the last pick | Exactly so | PASS |
+| CB-06 | Enter | type "siti", Enter | First match picked | Exactly so | PASS |
+| CB-07 | Partial text can't book | type "sit" with hours chosen | Book disabled until a real pick | Exactly so | PASS |
+| CB-08 | List removed with the page | open the list, click the Booking tab | No list left on screen | Exactly so | PASS |
+| CB-09 | Billing and Coaching | pick a member in Create Bill, a coach in Manage Classes | Both picked | Exactly so | PASS |
+
 ## Tab navigation (main.py)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

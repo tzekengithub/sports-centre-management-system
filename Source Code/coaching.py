@@ -1205,7 +1205,7 @@ def build_manage_classes_page(page_frame, page_hooks):
             tip="Who teaches the class (active coaches only). The class uses this coach's sport. "
                 "Can't be changed after scheduling.")
         common.add_form_row(form_frame, 0, "Coach", fields["coach_menu"],
-                            tip="Who teaches the class. Type in Find to search by name.")
+                            tip="Who teaches the class. Click the box and type to search by name.")
         fields["type"] = tk.StringVar(value="Group")
         type_row = tk.Frame(form_frame, bg=common.PANEL_BG)
         for class_type in CLASS_TYPES:
@@ -1238,11 +1238,9 @@ def build_manage_classes_page(page_frame, page_hooks):
             new_state = "disabled"
         else:
             new_state = "normal"
-        fields["coach_dropdown"].config(state=new_state)
+        # The coach box is an entry plus an arrow button: lock both.
         for coach_widget in fields["coach_menu"].winfo_children():
-            for find_widget in coach_widget.winfo_children():
-                if isinstance(find_widget, tk.Entry):
-                    find_widget.config(state=new_state)
+            coach_widget.config(state=new_state)
         for type_button in type_buttons:
             type_button.config(state=new_state)
 
@@ -1374,14 +1372,14 @@ def build_enrol_page(page_frame):
     member_choice_ids = {}
 
     def build_form(form_frame):
-        """Add the member drop-down (with a Find box)."""
+        """Add the member search box (type to search, or click the arrow)."""
         form_widgets["member"] = tk.StringVar(value="")
         form_widgets["menu"], form_widgets["dropdown"], form_widgets["set_members"] = common.make_filtered_menu(
             form_frame, form_widgets["member"], width=CHOICE_WIDTH,
             tip="The member to add. People already in this class, and members whose membership "
                 "ends before the class, are not listed.")
         common.add_form_row(form_frame, 0, "Member", form_widgets["menu"],
-                            tip="The member to add. Type in Find to search by name or ID.")
+                            tip="The member to add. Click the box and type to search by name or ID.")
 
     def fill_form(class_id):
         """List members not already in the picked class whose membership

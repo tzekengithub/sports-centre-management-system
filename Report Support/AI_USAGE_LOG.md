@@ -620,6 +620,21 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   26 GUI checks pass; Entry 23's 27 + 18 checks still pass; crash run
   104 clicks, no exception.
 
+## Entry 25 - Search-as-you-type member/coach box
+- **Asked:** The user found the separate Find box confusing and wanted
+  one box: type to search and pick from a drop-down, or click the arrow
+  to see everyone.
+- **Produced:** `common.make_filtered_menu` rewritten as a combo box
+  from an Entry, a ▼ button and a pop-up Listbox placed on the toplevel
+  (no ttk, no extra Toplevel). Used by Book a Court, Create Bill, Manage
+  Classes (coach and member) and Enrol Member. Same return pattern as
+  before, so pages only changed in how Manage Classes locks the coach
+  box.
+- **Verify:** CB-01 to CB-09 in `TEST_CASES.md` (21 GUI checks pass);
+  earlier logic suites pass; crash run 162 clicks, no exception. My
+  older scripts that looked for the old Find box were retired. No
+  screenshots (screen off): please look at the list position by eye.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

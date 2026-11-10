@@ -95,8 +95,12 @@ that read/write the data files and `raise ValueError` on bad input) and a
   is clicked. It opens on the month already typed in the box, and with
   `allow_past=False` (booking, classes) past days are grey and disabled.
 - `make_filtered_menu(parent, variable, width, tip, command, stacked)` -
-  a drop-down with a Find box: typing shortens the list (useful with
-  100+ members). Long choices are cut with "…" to fit.
+  a search-as-you-type combo box built from tkinter parts: an Entry,
+  a ▼ button that lists everyone, and a pop-up Listbox placed over the
+  window (so it is never clipped). Click and type to see matches; click
+  a row (or press Enter / arrow keys / Esc). Text that isn't a real
+  choice reverts to the last pick. `match` on the key pressed. Long
+  choices are cut with "…" to fit.
 - `build_scroll_area` scrolls with the mouse wheel while the pointer is
   over it (`<MouseWheel>`, and Button-4/5 on Linux).
 - `build_manage_page` greys out rows marked "past", and a
