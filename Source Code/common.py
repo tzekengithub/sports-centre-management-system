@@ -989,8 +989,9 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
                               tip=f"Type a {search_label} and press Enter or click Search. "
                                   "Leave it empty to show everything.")
     search_entry.pack(side="left", padx=6)
-    tk.Label(left_frame, text=" " + list_header, font=MONO_FONT, bg=APP_BG,
-             fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x")
+    # padx lines the headings up with the row text below (rows have a 2 px indent inside their border).
+    tk.Label(left_frame, text=list_header, font=MONO_FONT, bg=APP_BG,
+             fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x", padx=(2, 0))
     summary_label = tk.Label(left_frame, text="", font=SMALL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
                              anchor="w", justify="left", wraplength=520)
     summary_label.pack(side="bottom", fill="x", pady=(6, 0))
