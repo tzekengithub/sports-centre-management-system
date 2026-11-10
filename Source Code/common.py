@@ -191,6 +191,66 @@ def apply_theme(theme_name):
     current_theme["name"] = theme_name
 
 
+# Which palette names are used for which kind of widget option. Background
+# and text options are mapped separately because a light-theme value can be
+# shared between roles (white is both a panel background and button text).
+BACKGROUND_ROLES = ("APP_BG", "PANEL_BG", "BUTTON_COLOR", "DANGER_COLOR", "FREE_COLOR", "BOOKED_COLOR",
+                    "SELECTED_COLOR", "PAST_COLOR", "BORDER_COLOR", "LIST_BORDER_COLOR", "TOOLTIP_BG")
+TEXT_ROLES = ("TEXT_COLOR", "ACCENT_COLOR", "BUTTON_TEXT_COLOR", "MUTED_TEXT_COLOR", "DISABLED_TEXT_COLOR",
+              "TOOLTIP_TEXT_COLOR", "DANGER_COLOR")
+BACKGROUND_OPTIONS = ("bg", "activebackground", "highlightbackground", "highlightcolor", "selectcolor",
+                      "troughcolor", "disabledbackground", "readonlybackground", "selectbackground")
+TEXT_OPTIONS = ("fg", "activeforeground", "disabledforeground", "insertbackground", "selectforeground")
+
+
+def make_colour_map(old_theme_name, new_theme_name, role_names):
+    """Return a dictionary of old colour -> new colour for the given palette names."""
+    colour_map = {}
+    for role_name in role_names:
+        colour_map[THEMES[old_theme_name][role_name].lower()] = THEMES[new_theme_name][role_name]
+    return colour_map
+
+
+def recolour_widgets(root_window, old_theme_name, new_theme_name):
+    """Change every widget under root_window from the old theme's colours to
+    the new theme's, IN PLACE. Nothing is rebuilt, so the page you are on,
+    typed text, selections and scroll positions all stay as they are. Call
+    apply_theme() first so widgets built afterwards use the new colours."""
+    background_map = make_colour_map(old_theme_name, new_theme_name, BACKGROUND_ROLES)
+    text_map = make_colour_map(old_theme_name, new_theme_name, TEXT_ROLES)
+    waiting = [root_window]
+    while len(waiting) > 0:
+        widget = waiting.pop()
+        waiting.extend(widget.winfo_children())
+        for option_names, colour_map in ((BACKGROUND_OPTIONS, background_map), (TEXT_OPTIONS, text_map)):
+            for option in option_names:
+                try:
+                    current_colour = str(widget.cget(option)).lower()
+                    if current_colour in colour_map:
+                        widget.config(**{option: colour_map[current_colour]})
+                except tk.TclError:
+                    # This kind of widget doesn't have that option.
+                    pass
+        # Options nobody sets get their colour from the option database's
+        # "*Foreground" (a text colour), so those two options use the text map.
+        for option in ("activebackground", "selectbackground"):
+            try:
+                current_colour = str(widget.cget(option)).lower()
+                if current_colour in text_map:
+                    widget.config(**{option: text_map[current_colour]})
+            except tk.TclError:
+                pass
+        try:
+            # Text typed in a box is highlighted as TEXT_COLOR with PANEL_BG letters, as in a new box.
+            if widget.winfo_class() in ("Entry", "Canvas"):
+                widget.config(selectbackground=TEXT_COLOR, selectforeground=PANEL_BG)
+            # Dark text sits on the amber "selected" colour in both themes.
+            if widget.winfo_class() == "Button" and str(widget.cget("bg")).lower() == SELECTED_COLOR.lower():
+                widget.config(fg=SELECTED_TEXT_COLOR, activeforeground=SELECTED_TEXT_COLOR)
+        except tk.TclError:
+            pass
+
+
 def apply_widget_defaults(root_window):
     """Set default colours (tkinter's option database) for widget options
     the code doesn't set itself - text colour, entry and list boxes,
@@ -249,7 +309,8 @@ def save_theme_choice(theme_name):
 def add_tooltip(widget, tip_text):
     """Show a small yellow hint box explaining how to use widget when the
     mouse rests on it for a moment; it disappears when the mouse leaves
-    or the widget is clicked. Does nothing if tip_text is None."""
+    or the widget is clicked. Does nothing if tip_text is None. tip_text
+    may also be a function that returns the text when the hint opens."""
     if tip_text is None:
         return
     tip_state = {"window": None, "job": None}
@@ -264,7 +325,11 @@ def add_tooltip(widget, tip_text):
         tip_window = tk.Toplevel(widget)
         tip_window.wm_overrideredirect(True)
         tip_window.wm_geometry(f"+{x_position}+{y_position}")
-        tk.Label(tip_window, text=tip_text, font=SMALL_FONT, bg=TOOLTIP_BG, fg=TOOLTIP_TEXT_COLOR,
+        if callable(tip_text):
+            shown_text = tip_text()
+        else:
+            shown_text = tip_text
+        tk.Label(tip_window, text=shown_text, font=SMALL_FONT, bg=TOOLTIP_BG, fg=TOOLTIP_TEXT_COLOR,
                  relief="solid", bd=1, padx=7, pady=4, justify="left", wraplength=330).pack()
         tip_state["window"] = tip_window
 
@@ -941,11 +1006,13 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
     def highlight_row(record_id):
         """Colour the row being edited so it is obvious which one it is."""
         for row_record_id in row_widgets:
-            row_frame, row_label, base_colour = row_widgets[row_record_id]
+            row_frame, row_label, row_is_past = row_widgets[row_record_id]
             if row_record_id == record_id:
                 row_colour = FREE_COLOR
+            elif row_is_past:
+                row_colour = PAST_COLOR
             else:
-                row_colour = base_colour
+                row_colour = PANEL_BG
             row_frame.config(bg=row_colour)
             row_label.config(bg=row_colour)
 
@@ -1033,7 +1100,7 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
             row_frame.bind("<Button-1>", make_row_click(record_id))
             row_label.bind("<Button-1>", make_row_click(record_id))
             add_tooltip(row_label, f"Click to load {record_id} into the form and change it.")
-            row_widgets[record_id] = (row_frame, row_label, base_colour)
+            row_widgets[record_id] = (row_frame, row_label, is_past)
         highlight_row(page_state["editing_id"])
         if summary_text is not None:
             summary_label.config(text=summary_text())

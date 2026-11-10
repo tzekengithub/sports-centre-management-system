@@ -242,6 +242,17 @@ workflow rules. "Actual" is what really happened, not a guess.
 | BKR2-01 | Day sheet | Save Day Sheet for a day with 2 bookings | File in data/day_sheets lists both, total 3 hours | Exactly so | PASS |
 | BK-ALL | Every button, blank fields | crash run (104 clicks) | No uncaught exception | None raised | PASS |
 
+## Dark mode keeps your place (Entry 27)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| DM-01 | Same page after switching | Membership > Register, type a name, click Dark Mode | Still on Register; typed name still there; button reads Light Mode; choice saved | Exactly so | PASS |
+| DM-02 | Same colours as a fresh dark start | all 18 pages: switch in place, then compare every widget's colour options with a window started in dark mode | No differences | 2,807 widgets compared, 0 differences | PASS |
+| DM-03 | Round trip | light > dark > light on all 18 pages | Every widget back to its original colours | 0 mismatches | PASS |
+| DM-04 | Selected booking hour | pick an hour, switch | Still selected, amber with dark text; grid redraw after the switch uses dark colours | Exactly so | PASS |
+| DM-05 | Highlighted list row | click a coach row, switch, click another row | Highlight kept; old row returns to the dark panel colour (not stale light) | Exactly so | PASS |
+| DM-06 | Hover hint | theme button hint | Follows the current theme | Function-based hint, follows the theme | PASS |
+
 ## Rubric round: Record parent class and full re-run (Entry 26)
 
 The logic cases of the sections above (MEM, COA, BKG, BIL, GEN, FIX) were

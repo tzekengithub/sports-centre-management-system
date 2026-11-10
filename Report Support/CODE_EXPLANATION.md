@@ -331,8 +331,12 @@ GUI (`build_billing_tab`) - menu of 6 actions, one page each:
   the current theme. The Dark Mode / Light Mode button calls
   `on_theme_toggle`, which switches the palette with
   `common.apply_theme`, saves the choice (`common.save_theme_choice` ->
-  `data/settings.txt`), destroys everything and rebuilds it on the same
-  tab. In `common.py`, `THEMES` holds the light and dark palettes;
+  `data/settings.txt`) and calls `common.recolour_widgets`, which walks
+  every widget (a `while` loop over a list of widgets still to visit) and
+  swaps old palette colours for new ones in place. Nothing is rebuilt, so
+  the tab, page, typed text and selections are kept. Background and text
+  options use separate old-to-new maps, because one light colour can play
+  both roles. In `common.py`, `THEMES` holds the light and dark palettes;
   `apply_theme` reassigns the shared colour names (`global`), and
   `apply_widget_defaults` sets tkinter option-database defaults (text
   colour, entry/list/menu colours) for options the code doesn't set

@@ -668,6 +668,23 @@ Tool used: Claude Code (Anthropic), one continuous build session.
 - **Verify:** `TEST_CASES.md` section "Rubric round": 86 logic checks and
   all earlier GUI suites pass; fresh start from another folder works.
 
+## Entry 27 - Dark mode keeps your place
+- **Asked:** Why does switching to dark mode go back to the main menu?
+  It should only change the colours and keep everything as it was.
+- **Cause:** `on_theme_toggle` destroyed every widget and rebuilt the
+  window, so each tab came back on its action menu and typed text was lost.
+- **Produced:** `common.recolour_widgets` changes the colours of the
+  existing widgets in place (old palette value to new, with separate maps
+  for background and text options). Stale colours were fixed: the tab
+  bar now reads the palette when a tab is chosen, manage-page rows
+  remember "past or not" instead of a colour, and the theme button's
+  hint is a function that follows the theme. The revenue bars now use
+  `BUTTON_COLOR` (the old `ACCENT_COLOR` fill is ambiguous with it in
+  light mode), so in dark mode they are a darker green than before.
+- **Verify:** DM-01 to DM-06 in `TEST_CASES.md`. Earlier suites still
+  pass. One old combo-box test assumed hours were still free today; it
+  failed after 22:00 and now uses tomorrow.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

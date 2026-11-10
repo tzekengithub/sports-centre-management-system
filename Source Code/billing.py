@@ -980,7 +980,7 @@ def build_revenue_page(section_frame, page_hooks):
             bar_holder.pack_propagate(False)
             if largest_total > 0 and category_total > 0:
                 bar_width = int(REVENUE_BAR_WIDTH * category_total / largest_total)
-                tk.Frame(bar_holder, bg=common.ACCENT_COLOR, width=bar_width, height=14).pack(side="left")
+                tk.Frame(bar_holder, bg=common.BUTTON_COLOR, width=bar_width, height=14).pack(side="left")
             row_index += 1
 
         tk.Frame(card, bg=common.BORDER_COLOR, height=1).grid(row=row_index, column=0, columnspan=3,

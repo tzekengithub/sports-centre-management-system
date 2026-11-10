@@ -129,14 +129,28 @@ def build_home_tab(parent, switch_to_tab):
     return home_frame
 
 
+def theme_button_text():
+    """Return the label for the theme button: the mode you would switch TO."""
+    if common.current_theme["name"] == "dark":
+        return "☀ Light Mode"
+    return "☾ Dark Mode"
+
+
+def theme_tip():
+    """Return the hover hint for the theme button (follows the current theme)."""
+    if common.current_theme["name"] == "dark":
+        return "Switch back to the light colours. Your choice is remembered next time."
+    return "Switch to dark colours, easier on the eyes at night. Your choice is remembered next time."
+
+
 def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
     """Build the tab bar and content area inside root_window using the
-    current theme's colours, and show start_tab. Returns a function that
-    tells which tab is showing (used to come back to it after the theme
-    is switched)."""
+    current theme's colours, and show start_tab. Returns the theme button,
+    so its label can be changed when the theme is switched (the rest of
+    the window is recoloured in place, not rebuilt)."""
     # Selected tab looks "pressed in" (same colour as the page below it);
-    # the other tabs are normal buttons. Read here, not at import time,
-    # so they follow the current theme.
+    # the other tabs are normal buttons. Read when used, not at import
+    # time, so they follow the current theme.
     active_tab_bg = common.APP_BG
     active_tab_fg = common.ACCENT_COLOR
     inactive_tab_bg = common.BUTTON_COLOR
@@ -185,13 +199,16 @@ def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
         tab_state["current_tab"] = tab_name
         tab_state["current_frame"] = new_frame
 
-        # Highlight the selected tab, un-highlight the rest.
+        # Highlight the selected tab, un-highlight the rest (using the
+        # colours of the theme that is showing now).
         for other_tab_name in TAB_ORDER:
             other_button = tab_buttons[other_tab_name]
             if other_tab_name == tab_name:
-                other_button.config(bg=active_tab_bg, fg=active_tab_fg, relief="flat")
+                other_button.config(bg=common.APP_BG, fg=common.ACCENT_COLOR, relief="flat",
+                                    activebackground=common.APP_BG, activeforeground=common.ACCENT_COLOR)
             else:
-                other_button.config(bg=inactive_tab_bg, fg=inactive_tab_fg, relief="flat")
+                other_button.config(bg=common.BUTTON_COLOR, fg=common.BUTTON_TEXT_COLOR, relief="flat",
+                                    activebackground=common.APP_BG, activeforeground=common.ACCENT_COLOR)
 
     def make_tab_command(tab_name):
         """Return the command for one tab button: switch to tab_name."""
@@ -219,25 +236,14 @@ def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
     common.add_tooltip(exit_button, "Close the program (you will be asked to confirm). "
                                     "Everything is already saved.")
 
-    if common.current_theme["name"] == "dark":
-        theme_button_text = "☀ Light Mode"
-        theme_tip = "Switch back to the light colours. Your choice is remembered next time."
-    else:
-        theme_button_text = "☾ Dark Mode"
-        theme_tip = "Switch to dark colours, easier on the eyes at night. Your choice is remembered next time."
-    theme_button = tk.Button(tab_bar, text=theme_button_text, width=13, font=common.BUTTON_FONT, bd=0, pady=12,
+    theme_button = tk.Button(tab_bar, text=theme_button_text(), width=13, font=common.BUTTON_FONT, bd=0, pady=12,
                              bg=inactive_tab_bg, fg=inactive_tab_fg, activebackground=active_tab_bg,
                              activeforeground=active_tab_fg, command=on_theme_toggle)
     theme_button.pack(side="right")
     common.add_tooltip(theme_button, theme_tip)
 
     switch_to_tab(start_tab)
-
-    def get_current_tab():
-        """Return the name of the tab that is showing."""
-        return tab_state["current_tab"]
-
-    return get_current_tab
+    return theme_button
 
 
 def main():
@@ -250,7 +256,7 @@ def main():
     common.centre_window(root_window, common.WINDOW_WIDTH,
                          common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
     root_window.minsize(common.WINDOW_WIDTH, common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
-    window_state = {"get_current_tab": None}
+    window_state = {"theme_button": None}
 
     def on_exit():
         """Ask before closing - used by the Exit tab AND the window's X."""
@@ -258,28 +264,27 @@ def main():
             root_window.destroy()
 
     def on_theme_toggle():
-        """Switch light <-> dark, remember the choice, and rebuild the whole
-        window in the new colours, staying on the same tab."""
-        if common.current_theme["name"] == "dark":
+        """Switch light <-> dark and remember the choice. Every widget is
+        recoloured in place, so you stay on the same tab and page with
+        whatever you had typed or selected."""
+        old_theme = common.current_theme["name"]
+        if old_theme == "dark":
             new_theme = "light"
         else:
             new_theme = "dark"
-        current_tab = window_state["get_current_tab"]()
         common.apply_theme(new_theme)
         try:
             common.save_theme_choice(new_theme)
         except OSError:
             # Not being able to remember the choice is not worth an error box.
             pass
-        for child_widget in root_window.winfo_children():
-            child_widget.destroy()
+        common.recolour_widgets(root_window, old_theme, new_theme)
         common.apply_widget_defaults(root_window)
-        window_state["get_current_tab"] = build_window_contents(root_window, current_tab,
-                                                                on_theme_toggle, on_exit)
+        window_state["theme_button"].config(text=theme_button_text())
 
     root_window.protocol("WM_DELETE_WINDOW", on_exit)
     common.apply_widget_defaults(root_window)
-    window_state["get_current_tab"] = build_window_contents(root_window, "home", on_theme_toggle, on_exit)
+    window_state["theme_button"] = build_window_contents(root_window, "home", on_theme_toggle, on_exit)
 
     if is_first_run:
         root_window.after(200, show_welcome_message)

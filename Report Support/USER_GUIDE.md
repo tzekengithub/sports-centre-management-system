@@ -45,8 +45,9 @@ form again).
 - **Units are always shown:** money in RM, times as 24-hour HH:00,
   durations in hours, commission in %, class sizes in people.
 - **Dark mode:** click **☾ Dark Mode** at the top right for dark colours,
-  and **☀ Light Mode** to switch back. The program remembers your choice
-  next time it starts.
+  and **☀ Light Mode** to switch back. Only the colours change: you stay on
+  the same page with whatever you had typed or selected. The program
+  remembers your choice next time it starts.
 - **Mistakes never crash the program.** A message tells you what to fix,
   e.g. "Please enter a valid number for Hourly rate."
 - **Dates:** type `YYYY-MM-DD`, or click 📅 for a calendar pop-up.
