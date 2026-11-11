@@ -52,6 +52,7 @@ TAB_LABELS = {
 }
 
 TAB_BAR_HEIGHT = 50
+MIN_ZOOM_WIDTH = 900
 
 # Hover hints for the tab bar.
 TAB_TIPS = {
@@ -143,7 +144,7 @@ def theme_tip():
     return "Switch to dark colours, easier on the eyes at night. Your choice is remembered next time."
 
 
-def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
+def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit, on_zoom_in, on_zoom_out):
     """Build the tab bar and content area inside root_window using the
     current theme's colours, and show start_tab. Returns the theme button,
     so its label can be changed when the theme is switched (the rest of
@@ -242,6 +243,21 @@ def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit):
     theme_button.pack(side="right")
     common.add_tooltip(theme_button, theme_tip)
 
+    # Zoom buttons (right of the theme button); Ctrl + mouse wheel and
+    # Ctrl + / Ctrl - / Ctrl 0 do the same, see main().
+    zoom_in_button = tk.Button(tab_bar, text="A+", width=4, font=common.BUTTON_FONT, bd=0, pady=12,
+                               bg=inactive_tab_bg, fg=inactive_tab_fg, activebackground=active_tab_bg,
+                               activeforeground=active_tab_fg, command=on_zoom_in)
+    zoom_in_button.pack(side="right")
+    common.add_tooltip(zoom_in_button, "Zoom in: make text and lists bigger. "
+                                       "Shortcut: Ctrl + mouse wheel up, or Ctrl and +.")
+    zoom_out_button = tk.Button(tab_bar, text="A-", width=4, font=common.BUTTON_FONT, bd=0, pady=12,
+                                bg=inactive_tab_bg, fg=inactive_tab_fg, activebackground=active_tab_bg,
+                                activeforeground=active_tab_fg, command=on_zoom_out)
+    zoom_out_button.pack(side="right")
+    common.add_tooltip(zoom_out_button, "Zoom out: make text and lists smaller. "
+                                        "Shortcut: Ctrl + mouse wheel down, or Ctrl and -.")
+
     switch_to_tab(start_tab)
     return theme_button
 
@@ -250,13 +266,82 @@ def main():
     """Build the single main window with its tab bar and run it."""
     is_first_run = common.ensure_data_files_exist()
     common.apply_theme(common.load_theme_choice())
+    common.apply_zoom(common.load_zoom_choice())
 
     root_window = tk.Tk()
     root_window.title("Sports Centre Management System")
-    common.centre_window(root_window, common.WINDOW_WIDTH,
-                         common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
-    root_window.minsize(common.WINDOW_WIDTH, common.WINDOW_HEIGHT + TAB_BAR_HEIGHT)
     window_state = {"theme_button": None}
+
+    def window_size_for(zoom_percent):
+        """Return (width, height) of the window at a zoom level. Zooming out
+        never goes below MIN_ZOOM_WIDTH, because the pages are laid out for
+        about that width (their buttons and columns don't shrink as far as
+        the text does)."""
+        width = max(common.WINDOW_WIDTH * zoom_percent // 100, MIN_ZOOM_WIDTH)
+        height = (common.WINDOW_HEIGHT + TAB_BAR_HEIGHT) * zoom_percent // 100
+        return width, height
+
+    def zoom_fits_screen(zoom_percent):
+        """True if the window at this zoom fits on this screen. A bigger zoom
+        would cut the pages off, so it isn't offered (a small laptop screen
+        just has fewer zoom levels than a big monitor)."""
+        width, height = window_size_for(zoom_percent)
+        return width <= root_window.winfo_screenwidth() - 40 and height <= root_window.winfo_screenheight() - 80
+
+    def fit_window_to_zoom():
+        """Resize and centre the window for the current zoom."""
+        width, height = window_size_for(common.current_zoom["percent"])
+        root_window.minsize(min(width, common.WINDOW_WIDTH), min(height, common.WINDOW_HEIGHT + TAB_BAR_HEIGHT))
+        common.centre_window(root_window, width, height)
+
+    def change_zoom(step):
+        """Move one zoom level up (step 1) or down (step -1), or back to 100% (step 0).
+        Text in every widget is resized in place, so the page stays as it is."""
+        old_percent = common.current_zoom["percent"]
+        if step == 0:
+            new_percent = 100
+        else:
+            new_index = common.ZOOM_LEVELS.index(old_percent) + step
+            if new_index < 0 or new_index >= len(common.ZOOM_LEVELS):
+                return
+            new_percent = common.ZOOM_LEVELS[new_index]
+        if new_percent == old_percent or not zoom_fits_screen(new_percent):
+            return
+        common.apply_zoom(new_percent)
+        common.rezoom_widgets(root_window, old_percent, new_percent)
+        fit_window_to_zoom()
+        try:
+            common.save_zoom_choice(new_percent)
+        except OSError:
+            # Not being able to remember the zoom is not worth an error box.
+            pass
+
+    def on_zoom_in():
+        """Zoom in one level."""
+        change_zoom(1)
+
+    def on_zoom_out():
+        """Zoom out one level."""
+        change_zoom(-1)
+
+    def on_key_zoom_in(event):
+        """Ctrl and + (or =) zoom in."""
+        change_zoom(1)
+
+    def on_key_zoom_out(event):
+        """Ctrl and - zoom out."""
+        change_zoom(-1)
+
+    def on_key_zoom_reset(event):
+        """Ctrl and 0 go back to normal size."""
+        change_zoom(0)
+
+    def on_ctrl_wheel(event):
+        """Ctrl + mouse wheel: up zooms in, down zooms out."""
+        if event.delta > 0:
+            change_zoom(1)
+        else:
+            change_zoom(-1)
 
     def on_exit():
         """Ask before closing - used by the Exit tab AND the window's X."""
@@ -282,9 +367,20 @@ def main():
         common.apply_widget_defaults(root_window)
         window_state["theme_button"].config(text=theme_button_text())
 
+    # A zoom saved on a bigger screen may not fit this one: use the biggest that does.
+    while common.current_zoom["percent"] > 100 and not zoom_fits_screen(common.current_zoom["percent"]):
+        common.apply_zoom(common.ZOOM_LEVELS[common.ZOOM_LEVELS.index(common.current_zoom["percent"]) - 1])
+
     root_window.protocol("WM_DELETE_WINDOW", on_exit)
     common.apply_widget_defaults(root_window)
-    window_state["theme_button"] = build_window_contents(root_window, "home", on_theme_toggle, on_exit)
+    window_state["theme_button"] = build_window_contents(root_window, "home", on_theme_toggle, on_exit,
+                                                         on_zoom_in, on_zoom_out)
+    fit_window_to_zoom()
+    root_window.bind_all("<Control-MouseWheel>", on_ctrl_wheel)
+    root_window.bind_all("<Control-plus>", on_key_zoom_in)
+    root_window.bind_all("<Control-equal>", on_key_zoom_in)
+    root_window.bind_all("<Control-minus>", on_key_zoom_out)
+    root_window.bind_all("<Control-Key-0>", on_key_zoom_reset)
 
     if is_first_run:
         root_window.after(200, show_welcome_message)

@@ -134,13 +134,23 @@ LIST_BORDER_COLOR = "#8a929c"
 PAST_COLOR = "#e3e6ea"
 DISABLED_TEXT_COLOR = "#9aa3ad"
 TOOLTIP_TEXT_COLOR = "#2b2b2b"
-TITLE_FONT = ("Segoe UI", 16, "bold")
-LABEL_FONT = ("Segoe UI", 10)
-ENTRY_FONT = ("Segoe UI", 10)
-MONO_FONT = ("Consolas", 10)
-BUTTON_FONT = ("Segoe UI", 10, "bold")
-SMALL_FONT = ("Segoe UI", 9)
-HEADING_FONT = ("Segoe UI", 11, "bold")
+BASE_TITLE_FONT = ("Segoe UI", 16, "bold")
+BASE_LABEL_FONT = ("Segoe UI", 10)
+BASE_ENTRY_FONT = ("Segoe UI", 10)
+BASE_MONO_FONT = ("Consolas", 10)
+BASE_BUTTON_FONT = ("Segoe UI", 10, "bold")
+BASE_SMALL_FONT = ("Segoe UI", 9)
+BASE_HEADING_FONT = ("Segoe UI", 11, "bold")
+# The fonts widgets actually use: the base ones scaled by the zoom (apply_zoom).
+TITLE_FONT = BASE_TITLE_FONT
+LABEL_FONT = BASE_LABEL_FONT
+ENTRY_FONT = BASE_ENTRY_FONT
+MONO_FONT = BASE_MONO_FONT
+BUTTON_FONT = BASE_BUTTON_FONT
+SMALL_FONT = BASE_SMALL_FONT
+HEADING_FONT = BASE_HEADING_FONT
+ZOOM_LEVELS = (80, 100, 120, 140, 160)
+current_zoom = {"percent": 100}
 MUTED_TEXT_COLOR = "#5b6573"
 BORDER_COLOR = "#d9dee5"
 FREE_COLOR = "#d8efe0"
@@ -288,22 +298,94 @@ def apply_widget_defaults(root_window):
 SETTINGS_FILE = os.path.join(DATA_FOLDER, "settings.txt")
 
 
-def load_theme_choice():
-    """Return the theme saved last time ('light' if none was saved yet).
+def load_setting(key, default_value):
+    """Return the saved text for key in settings.txt, or default_value.
     The settings file is optional, so it is checked before reading."""
     if not os.path.isfile(SETTINGS_FILE):
-        return "light"
+        return default_value
     for line in read_lines(SETTINGS_FILE):
-        if line.startswith("theme="):
-            theme_name = line[len("theme="):]
-            if theme_name in THEMES:
-                return theme_name
+        if line.startswith(key + "="):
+            return line[len(key) + 1:]
+    return default_value
+
+
+def save_setting(key, value):
+    """Save key=value in settings.txt, keeping the other saved settings."""
+    kept_lines = []
+    if os.path.isfile(SETTINGS_FILE):
+        for line in read_lines(SETTINGS_FILE):
+            if not line.startswith(key + "="):
+                kept_lines.append(line)
+    kept_lines.append(key + "=" + str(value))
+    write_lines(SETTINGS_FILE, kept_lines)
+
+
+def load_theme_choice():
+    """Return the theme saved last time ('light' if none was saved yet)."""
+    theme_name = load_setting("theme", "light")
+    if theme_name in THEMES:
+        return theme_name
     return "light"
 
 
 def save_theme_choice(theme_name):
     """Remember the chosen theme for the next time the program starts."""
-    write_lines(SETTINGS_FILE, ["theme=" + theme_name])
+    save_setting("theme", theme_name)
+
+
+def load_zoom_choice():
+    """Return the zoom % saved last time (100 if none or not a valid level)."""
+    saved_text = load_setting("zoom", "100")
+    if saved_text.isdigit() and int(saved_text) in ZOOM_LEVELS:
+        return int(saved_text)
+    return 100
+
+
+def save_zoom_choice(zoom_percent):
+    """Remember the chosen zoom % for the next time the program starts."""
+    save_setting("zoom", zoom_percent)
+
+
+def scaled_font(base_font, zoom_percent):
+    """Return base_font ((family, size[, style])) with its size scaled by zoom_percent."""
+    new_size = max(6, round(base_font[1] * zoom_percent / 100))
+    return (base_font[0], new_size) + tuple(base_font[2:])
+
+
+def apply_zoom(zoom_percent):
+    """Rescale every shared font constant to zoom_percent (100 = normal), so
+    widgets built afterwards (list rows, grid cells, pop-ups) are the right size."""
+    global TITLE_FONT, LABEL_FONT, ENTRY_FONT, MONO_FONT, BUTTON_FONT, SMALL_FONT, HEADING_FONT
+    TITLE_FONT = scaled_font(BASE_TITLE_FONT, zoom_percent)
+    LABEL_FONT = scaled_font(BASE_LABEL_FONT, zoom_percent)
+    ENTRY_FONT = scaled_font(BASE_ENTRY_FONT, zoom_percent)
+    MONO_FONT = scaled_font(BASE_MONO_FONT, zoom_percent)
+    BUTTON_FONT = scaled_font(BASE_BUTTON_FONT, zoom_percent)
+    SMALL_FONT = scaled_font(BASE_SMALL_FONT, zoom_percent)
+    HEADING_FONT = scaled_font(BASE_HEADING_FONT, zoom_percent)
+    current_zoom["percent"] = zoom_percent
+
+
+def rezoom_widgets(root_window, old_percent, new_percent):
+    """Resize the text of every widget under root_window IN PLACE (nothing is
+    rebuilt, so the page, typed text and selections stay). Call apply_zoom()
+    first so widgets built afterwards match."""
+    waiting = [root_window]
+    while len(waiting) > 0:
+        widget = waiting.pop()
+        waiting.extend(widget.winfo_children())
+        try:
+            parts = root_window.tk.splitlist(str(widget.cget("font")))
+        except tk.TclError:
+            # This kind of widget has no font option.
+            continue
+        # Only "family size [style...]" fonts are scaled; named fonts are left alone.
+        if len(parts) >= 2 and parts[1].lstrip("-").isdigit():
+            # Go back to the 100% size first, then scale: repeated zoom steps
+            # then never drift because of rounding.
+            base_size = round(abs(int(parts[1])) * 100 / old_percent)
+            new_size = max(6, round(base_size * new_percent / 100))
+            widget.config(font=(parts[0], new_size) + tuple(parts[2:]))
 
 
 def add_tooltip(widget, tip_text):

@@ -723,6 +723,13 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   checks pass; earlier suites pass (two expectations updated: B2-01 and
   the PAID-bill wording); crash run 169 clicks, no exception.
 
+## Entry 29 - Zoom
+
+User asked to be able to zoom in on records/rows. AI added A-/A+ buttons and
+Ctrl+wheel/+/- shortcuts that scale every font in place (no `tkinter.font`,
+no rebuild), resize the window, and save the level in `settings.txt`.
+Checked by driving the buttons in a launched window.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

@@ -340,6 +340,13 @@ GUI (`build_billing_tab`) - menu of 6 actions, one page each:
 - **Exit warning:** `on_exit` asks "Are you sure you want to exit?" and is
   used by both the Exit tab and the window's X button
   (`root_window.protocol("WM_DELETE_WINDOW", on_exit)`).
+- **Zoom:** the A- / A+ buttons in the tab bar (also Ctrl + mouse wheel, Ctrl +/-)
+  call `change_zoom` in `main.py`, which moves through `common.ZOOM_LEVELS`
+  (80-160%). `common.apply_zoom` rescales the shared font constants (so rows,
+  grid cells and pop-ups built later match) and `common.rezoom_widgets` resizes
+  every existing widget's font in place; the window grows to fit. The level is
+  saved in `data/settings.txt` (`zoom=`) through `common.save_setting`, which
+  keeps the theme line.
 - **Dark mode:** `build_window_contents` builds the tab bar and tabs in
   the current theme. The Dark Mode / Light Mode button calls
   `on_theme_toggle`, which switches the palette with
