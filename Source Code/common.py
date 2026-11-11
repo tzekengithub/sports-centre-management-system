@@ -604,8 +604,29 @@ def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stack
             listbox.insert(tk.END, "No match")
         listbox.bind("<ButtonPress-1>", on_list_press)
         listbox.bind("<Motion>", on_list_motion)
-        popup.place(x=entry.winfo_rootx() - top.winfo_rootx(),
-                    y=entry.winfo_rooty() - top.winfo_rooty() + entry.winfo_height())
+        # Keep the whole list inside the window: drop it below the box if
+        # there is room, otherwise open it upward (the member box on Book a
+        # Court sits at the bottom of the page), shift it left if it would
+        # run off the right edge, and as a last resort show fewer rows
+        # (the list still scrolls).
+        popup.update_idletasks()
+        box_x = entry.winfo_rootx() - top.winfo_rootx()
+        box_y = entry.winfo_rooty() - top.winfo_rooty()
+        room_below = top.winfo_height() - (box_y + entry.winfo_height()) - 4
+        room_above = box_y - 4
+        list_height = popup.winfo_reqheight()
+        if list_height > max(room_below, room_above) and row_count > 1:
+            row_height = list_height / row_count
+            fitting_rows = max(1, int((max(room_below, room_above) - 6) / row_height))
+            listbox.config(height=fitting_rows)
+            popup.update_idletasks()
+            list_height = popup.winfo_reqheight()
+        if list_height <= room_below or room_below >= room_above:
+            list_y = box_y + entry.winfo_height()
+        else:
+            list_y = box_y - list_height
+        list_x = max(0, min(box_x, top.winfo_width() - popup.winfo_reqwidth() - 4))
+        popup.place(x=list_x, y=list_y)
         popup.lift()
         state["popup"] = popup
         state["list"] = listbox

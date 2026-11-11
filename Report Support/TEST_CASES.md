@@ -407,3 +407,13 @@ what remains a documented decision rather than a defect.
 
 The Home page was screenshotted in light and dark mode on this machine
 (1000 x 610 window); other display scaling (125 %, 150 %) was not checked.
+
+
+## Drop-down list stays inside the window
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| DD-01 | Box at the bottom of the page | Book a Court, click the arrow / type "member" (34 members) | List opens upward, fully inside the window; picking a row works | Exactly so | PASS |
+| DD-02 | Very short window | window 330 px high, click the arrow | Fewer rows shown, list still inside the window | Exactly so | PASS |
+| DD-03 | Box near the top | Manage Classes coach box | Still opens downward, inside the window | Exactly so | PASS |
+| DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
