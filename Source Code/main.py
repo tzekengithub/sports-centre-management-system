@@ -1,6 +1,6 @@
 """
 Module      : main.py
-Author      : Teh Tze Ken (Group Leader - integration)
+Member 1    : Teh Tze Ken (student ID: ________) - Group Leader, integration
 Purpose     : Main entry point - checks the Python version, then builds
               ONE main window with a row of tabs along the top (Home,
               Booking, Membership, Coaching, Billing). Clicking a tab

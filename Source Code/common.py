@@ -755,7 +755,8 @@ def build_action_menu(window, title_text, action_list):
 def build_pick_page(page_frame, list_header, load_rows, action_label, action_function,
                     describe=None, build_form=None, fill_form=None, confirm_text=None,
                     danger=False, search_label=None, summary_text=None,
-                    empty_text="Nothing to show here.", result_title="Done", action_tip=None):
+                    empty_text="Nothing to show here.", result_title="Done", action_tip=None,
+                    refresh_on_error=False):
     """Build a "pick one, then act" page: a list on the left and, on the
     right, the picked row's details plus ONE action button.
       load_rows(search_text)  -> list of (row_id, row_text) to list
@@ -767,6 +768,8 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
       confirm_text(row_id)    -> question to confirm first (optional)
       summary_text()          -> a line shown under the list (optional)
     action_label None means a view-only page with no button.
+    refresh_on_error True reloads the list after a failed action, for pages
+    whose list can go stale while open (e.g. a class that has started since).
     Returns a refresh function (put it in page_hooks)."""
     pick_state = {"row_id": None}
     row_ids = []
@@ -863,6 +866,8 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
             message = action_function(row_id)
         except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
+            if refresh_on_error:
+                refresh()
             return
         messagebox.showinfo(result_title, message)
         refresh()

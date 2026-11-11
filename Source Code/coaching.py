@@ -1,6 +1,6 @@
 """
 Module      : coaching.py
-Author      : Tan Chor Koon
+Member 3    : Tan Chor Koon (student ID: ________)
 Purpose     : Coaching & Class Management module - assigns coaches to
               private sessions or group classes, enrols members, and
               tracks each coach's working hours and commission.
@@ -276,6 +276,10 @@ def delete_coach(coach_id):
         raise ValueError(f"Coach {coach_id} still has {upcoming_count} upcoming class(es). Delete those "
                          "classes in Manage Classes first (past classes can stay).")
     past_count = len(classes_for_coach(coach_id))
+    if past_count > 0 and not coach_record.is_active():
+        # Already kept as INACTIVE: nothing more to do, and the history stays.
+        return (f"Coach {coach_id} is already inactive. Their {past_count} past class(es) stay on record, "
+                "so they can't be deleted.")
     if past_count > 0:
         coach_record.set_status("INACTIVE")
         updated_lines = []
@@ -401,13 +405,27 @@ class SportsClass(common.Record):
 
 def line_to_class(line):
     """Convert one text-file line into a SportsClass object, or None if
-    the line is malformed."""
+    the line is malformed or holds impossible values (a hand-edited row
+    with duration 0, max people 0, an unknown sport, a bad date ...).
+    The date is tidied to YYYY-MM-DD. A row that returns None is hidden
+    from every list but stays in the file, because rewrite_records keeps
+    unreadable lines."""
     fields = common.split_fields(line, CLASS_FIELD_COUNT)
     if fields is None:
         return None
     try:
-        return SportsClass(fields[0], fields[1], fields[2], fields[3], fields[4],
-                            int(fields[5]), int(fields[6]), int(fields[7]), float(fields[8]), fields[9])
+        date_text = common.normalize_date(fields[4])
+        start_hour = int(fields[5])
+        duration_hrs = int(fields[6])
+        max_pax = int(fields[7])
+        fee_per_pax = float(fields[8])
+        if fields[2] not in common.COACHING_SPORTS:
+            raise ValueError("Unknown sport.")
+        # The same range checks as scheduling, minus the "not in the past" ones.
+        validate_class_details(fields[3], date_text, start_hour, duration_hrs, max_pax, fee_per_pax,
+                               check_timing=False)
+        return SportsClass(fields[0], fields[1], fields[2], fields[3], date_text,
+                            start_hour, duration_hrs, max_pax, fee_per_pax, fields[9])
     except ValueError:
         return None
 
@@ -536,26 +554,51 @@ def schedule_class(coach_id, class_type, date_text, start_hour, duration_hrs, ma
 
 def update_class(class_id, new_date_text, new_start_hour, new_duration_hrs, new_max_pax, new_fee_per_pax):
     """Update a class's date, hour, duration, maximum people and fee,
-    re-checking the coach's time clash and that max_pax is not reduced
-    below the number of members already enrolled."""
+    re-checking the coach's time clash, every enrolled member, and that
+    max_pax is not reduced below the number already enrolled. A class that
+    has started is history (hours, pay and commission are worked out from
+    it) and can't be edited; a class with a bill keeps its fee and length."""
     class_list = load_all_classes()
     target_class = find_class_by_id(class_list, class_id)
     if target_class is None:
         raise ValueError(f"No class found with ID {class_id}.")
 
+    # A class that has started (or is over) is a record of what happened:
+    # editing it would rewrite the coach's worked hours, pay and commission.
+    if class_has_started(target_class):
+        raise ValueError(f"Class {class_id} has already started, so it is kept as a record and can't be edited.")
+
     new_date_text = common.normalize_date(new_date_text)
     new_fee_per_pax = round(new_fee_per_pax, 2)
-    # Past/started checks only apply when the date or start time is moved,
-    # so a class that is over (or under way) can still have its fee fixed.
-    time_moved = (new_date_text != target_class.get_date_text()
-                  or new_start_hour != target_class.get_start_hour())
     validate_class_details(target_class.get_class_type(), new_date_text, new_start_hour,
-                           new_duration_hrs, new_max_pax, new_fee_per_pax, check_timing=time_moved)
+                           new_duration_hrs, new_max_pax, new_fee_per_pax)
+
+    # A bill was worked out from this class's fee and length: changing
+    # either would leave the bill showing the wrong amount.
+    bill_id = class_bill_id(class_id)
+    if bill_id is not None and (new_fee_per_pax != target_class.get_fee_per_pax()
+                                or new_duration_hrs != target_class.get_duration_hrs()):
+        raise ValueError(f"Bill {bill_id} was made for this class, so its fee and duration can't be changed. "
+                         "Void the bill first (Billing > Void Bill), or leave them as they are.")
+
     if new_max_pax < len(target_class.get_participant_list()):
         raise ValueError("Maximum people cannot be less than the number already enrolled.")
     if coach_has_time_clash(class_list, target_class.get_coach_id(), new_date_text, new_start_hour,
                              new_duration_hrs, ignore_class_id=class_id):
         raise ValueError("This coach already has a class at that time.")
+
+    # If the class moves or changes length, every member already in it must
+    # still be able to attend at the new time (membership valid on the new
+    # day, and not in another class at the same time).
+    timing_changed = (new_date_text != target_class.get_date_text()
+                      or new_start_hour != target_class.get_start_hour()
+                      or new_duration_hrs != target_class.get_duration_hrs())
+    if timing_changed:
+        for member_id in target_class.get_participant_list():
+            problem = member_enrol_problem(member_id, new_date_text, new_start_hour, new_duration_hrs,
+                                           class_list, ignore_class_id=class_id)
+            if problem is not None:
+                raise ValueError(f"The class can't be changed to that time. {problem}")
 
     target_class.set_date_text(new_date_text)
     target_class.set_start_hour(new_start_hour)
@@ -634,15 +677,21 @@ def enrol_participant(class_id, member_id):
     if target_class is None:
         raise ValueError(f"No class found with ID {class_id}.")
 
+    # Nobody can join a class that is over or under way: its record is
+    # history once it starts (see update_class).
     if target_class.get_date_text() < common.today_string():
         raise ValueError("This class has already taken place.")
     if class_has_started(target_class):
         raise ValueError("This class has already started today.")
+    # A set makes the "already enrolled" and "is it full" checks simple:
+    # it holds each member ID once, and len() is the head count.
     participant_set = set(target_class.get_participant_list())
     if member_id in participant_set:
         raise ValueError("This member is already enrolled.")
     if len(participant_set) >= target_class.get_max_pax():
         raise ValueError("This class is already full.")
+    # The member must exist, be a member on the class day, and be free at
+    # that time. ignore_class_id stops this class clashing with itself.
     problem = member_enrol_problem(member_id, target_class.get_date_text(), target_class.get_start_hour(),
                                    target_class.get_duration_hrs(), class_list, ignore_class_id=class_id)
     if problem is not None:
@@ -658,7 +707,9 @@ def enrol_participant(class_id, member_id):
 
 
 def remove_participant(class_id, member_id):
-    """Remove member_id from a class's participant list."""
+    """Remove member_id from a class's participant list. Refused once the
+    class has started (it is history) and while a bill (not VOID) was made
+    for this member and class."""
     class_list = load_all_classes()
     target_class = find_class_by_id(class_list, class_id)
     if target_class is None:
@@ -666,6 +717,12 @@ def remove_participant(class_id, member_id):
     participant_list = target_class.get_participant_list()
     if member_id not in participant_list:
         raise ValueError("This member is not enrolled in this class.")
+    if class_has_started(target_class):
+        raise ValueError(f"Class {class_id} has already started, so who was in it is kept as a record.")
+    bill_info = class_bill_info(class_id, member_id)
+    if bill_info is not None:
+        raise ValueError(f"{member_id} has bill {bill_info[0]} for this class, so they can't be taken out. "
+                         "Void the bill first (Billing > Void Bill) - a paid bill can't be voided.")
     participant_list.remove(member_id)
     target_class.set_participant_list(participant_list)
 
@@ -696,22 +753,43 @@ def search_classes(class_list, search_field, search_text):
     return results
 
 
-def class_bill_id(class_id):
-    """Return the ID of a bill (not VOID) made for class_id, or None.
-    Read straight from bills.txt (coaching does not import billing.py)."""
+def class_bill_info(class_id, member_id=None):
+    """Return (bill_id, status) of a bill (not VOID) made for class_id, or
+    None. With member_id, only that member's bill counts. Read straight
+    from bills.txt (coaching does not import billing.py). Field 1 is the
+    member, 3 the class and 8 the status."""
     for line in common.read_lines(common.BILLS_FILE):
         fields = common.split_fields(line, BILL_FIELD_COUNT)
-        if fields is not None and fields[3] == class_id and fields[8] != "VOID":
-            return fields[0]
+        if fields is None or fields[3] != class_id or fields[8] == "VOID":
+            continue
+        if member_id is None or fields[1] == member_id:
+            return fields[0], fields[8]
     return None
 
 
+def class_bill_id(class_id):
+    """Return the ID of a bill (not VOID) made for class_id, or None."""
+    bill_info = class_bill_info(class_id)
+    if bill_info is None:
+        return None
+    return bill_info[0]
+
+
 def cancel_class(class_id):
-    """Remove a class permanently from classes.txt. Blocked while a bill
-    (not VOID) points at it, because that bill would lose its class."""
-    bill_id = class_bill_id(class_id)
-    if bill_id is not None:
-        raise ValueError(f"Class {class_id} has bill {bill_id}, so it can't be deleted. "
+    """Remove a class permanently from classes.txt. Blocked once the class
+    has started (it is history: worked hours and commission come from it)
+    and while a bill (not VOID) points at it, because that bill would lose
+    its class."""
+    started_class = find_class_by_id(load_all_classes(), class_id)
+    if started_class is not None and class_has_started(started_class):
+        raise ValueError(f"Class {class_id} has already started, so it is kept as a record and can't be deleted.")
+    bill_info = class_bill_info(class_id)
+    if bill_info is not None and bill_info[1] == "PAID":
+        # A PAID bill can never be voided (billing.void_bill refuses it).
+        raise ValueError(f"Class {class_id} has a paid bill ({bill_info[0]}). Paid bills can't be voided, "
+                         "so this class is kept as a record and can't be deleted.")
+    if bill_info is not None:
+        raise ValueError(f"Class {class_id} has bill {bill_info[0]}, so it can't be deleted. "
                          "Void the bill first (Billing > Void Bill).")
     class_list = load_all_classes()
     remaining_lines = []
@@ -806,12 +884,14 @@ COACHING_ACTIONS = [
      "Click Delete beside a coach to remove them (a coach with past classes is kept as Inactive)."),
     ("Manage Classes", "Schedule, update or delete classes",
      "Blank form = schedule a new class (for a private session, pick its member). Click a class to "
-     "update it, then Save Changes. Click Delete beside a class to cancel it. Grey rows are over."),
+     "update it, then Save Changes. Click Delete beside a class to cancel it. Grey rows are over: "
+     "they are kept as a record and can't be edited or deleted."),
     ("Enrol Member", "Add a member to a class",
      "Click a class that hasn't started, pick the member on the right, then click Enrol. Full "
      "classes and members whose membership ends before the class are not listed."),
     ("Remove Member", "Take a member out of a class",
-     "Each row is one member in one class. Click the row, then click Remove."),
+     "Each row is one member in a class that hasn't started yet (classes that have started are kept "
+     "as a record, so they aren't listed). Click the row, then click Remove."),
     ("Hours & Commission", "Coach hours and earnings",
      "Hours, pay and commission per coach for classes that are over (upcoming hours are shown "
      "separately). Pay = hours x hourly rate. Commission = fee x people enrolled x the coach's %."),
@@ -862,7 +942,7 @@ def build_coaching_tab(parent):
         page_frames["Remove Member"], f"{'Class ID':<9}{'Date':<11}{'Sport':<10}{'Member ID':<10}{'Name':<20}",
         enrolment_rows, "Remove", remove_member_action, describe=describe_enrolment,
         confirm_text=remove_member_question, danger=True, search_label="Member name",
-        empty_text="Nobody is enrolled in an upcoming class.")
+        empty_text="Nobody is enrolled in a class that hasn't started.")
     build_report_page(page_frames["Hours & Commission"], page_hooks)
     return window
 
@@ -1179,6 +1259,9 @@ def build_manage_coaches_page(page_frame, page_hooks):
         if coach is None:
             return f"Delete coach {coach_id}?"
         if len(classes_for_coach(coach_id)) > 0 and len(upcoming_classes_for_coach(coach_id)) == 0:
+            if not coach.is_active():
+                return (f"{coach_id} {coach.get_name()} is already inactive. Their past classes stay on "
+                        "record, so they can't be deleted. Continue?")
             return (f"{coach_id} {coach.get_name()} has taught classes before, so they will be kept as "
                     "INACTIVE (their history stays) instead of being deleted. Continue?")
         return f"Delete coach {coach_id} {coach.get_name()} permanently?"
@@ -1204,9 +1287,11 @@ def build_manage_classes_page(page_frame, page_hooks):
         if visible:
             fields["member_label"].grid(row=7, column=0, sticky="w", padx=(0, 10), pady=4)
             fields["member_menu"].grid(row=7, column=1, sticky="w", pady=4)
+            fields["member_hint"].grid(row=8, column=1, sticky="w")
         else:
             fields["member_label"].grid_remove()
             fields["member_menu"].grid_remove()
+            fields["member_hint"].grid_remove()
 
     def apply_class_type():
         """A private session is always for 1 person, so fix Max people at
@@ -1258,6 +1343,11 @@ def build_manage_classes_page(page_frame, page_hooks):
             tip="The member this private session is for (members whose membership hasn't expired). "
                 "They are enrolled as soon as you schedule it.")
         common.add_tooltip(fields["member_label"], "The member this private session is for.")
+        # Members valid TODAY are listed; their membership is checked again for the class date on Save.
+        fields["member_hint"] = tk.Label(form_frame, text="Members valid today are listed. Their membership "
+                                         "is checked for the class date when you save.", font=common.SMALL_FONT,
+                                         bg=common.PANEL_BG, fg=common.MUTED_TEXT_COLOR, anchor="w",
+                                         justify="left", wraplength=240)
 
     def set_locked(locked):
         """Coach and type can't be changed on an existing class."""
@@ -1384,8 +1474,8 @@ def build_manage_classes_page(page_frame, page_hooks):
 
     def summary_text():
         """Explain the grey rows under the list."""
-        return ("Grey rows are classes that are over. Their date and start time can't be moved to the "
-                "past, but the fee, size and duration can still be corrected.")
+        return ("Grey rows are classes that are over (or under way). They are kept as a record of the hours "
+                "worked, so they can't be edited or deleted. A class with a bill keeps its fee and duration.")
 
     page_hooks["Manage Classes"] = common.build_manage_page(
         page_frame, CLASS_LIST_HEADER, load_rows, "class", build_form, clear_form, fill_form,
@@ -1454,6 +1544,7 @@ def build_enrol_page(page_frame):
         return matching_rows
 
     return common.build_pick_page(page_frame, CLASS_LIST_HEADER, open_rows, "Enrol", enrol_action,
+                                  refresh_on_error=True,
                                   describe=describe_class, build_form=build_form, fill_form=fill_form,
                                   search_label="Sport or coach name",
                                   empty_text="No upcoming classes with space.")
@@ -1514,9 +1605,12 @@ def build_report_page(page_frame, page_hooks):
             report_listbox.insert(tk.END, (f"{common.fit_text(coach_name, 20):<21}{coach_id:<9}"
                                            f"{len(coach_classes):>8}{coach_hours:>7}{coach_pay:>11.2f}"
                                            f"{commission:>17.2f}{str(upcoming_hours) + ' h':>10}"))
-        total_label.config(text=(f"Worked: {total_hours} hours, pay RM {pay_sum:.2f}, commission "
-                                 f"RM {commission_sum:.2f}.   Upcoming (not counted yet): "
-                                 f"{total_upcoming_hours} hours"))
+        summary_line = (f"Worked: {total_hours} hours, pay RM {pay_sum:.2f}, commission "
+                        f"RM {commission_sum:.2f}.   Upcoming (not counted yet): "
+                        f"{total_upcoming_hours} hours")
+        if month_text != "" and len(month_classes) == 0:
+            summary_line = "Nothing worked yet in this month.   " + summary_line
+        total_label.config(text=summary_line)
 
     def on_month_changed(chosen_month):
         """Recalculate when a different month is picked."""

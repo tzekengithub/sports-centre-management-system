@@ -170,16 +170,29 @@ Logic:
   page asks first ("N upcoming classes will change, M have members").
 - `classes_for_coach` / `upcoming_classes_for_coach` / `delete_coach` -
   a coach with upcoming classes can't be removed; one with only past
-  classes is kept as INACTIVE (history stays); one with no classes is
-  deleted. The confirm question names the coach and says which.
+  classes is kept as INACTIVE (history stays); one who is already
+  INACTIVE just gets "already inactive, history kept"; one with no
+  classes is deleted. The confirm question names the coach and says which.
 - `member_enrol_problem(...)` - why a member can't join a class: not
   found, membership ends before the class day, or already in another
   class at an overlapping time. Used by `enrol_participant` and by
   `schedule_class(..., member_id)`, which saves a private session with
   its member in one write. `members_valid_on(date)` fills the member
   drop-downs.
-- `class_bill_id` / `cancel_class` - a class with a bill that isn't
-  VOID can't be deleted; the confirm question lists enrolled members.
+- `class_bill_info(class_id, member_id=None)` (bills.txt: field 1 member,
+  3 class, 8 status) and `class_bill_id` - `cancel_class` refuses a class
+  that has started, and a class with a bill that isn't VOID. A PAID bill
+  can never be voided, so for it the message says the class is kept as a
+  record. The confirm question lists enrolled members.
+- `update_class` - refuses a class that has started; refuses a fee or
+  duration change while a non-VOID bill exists; when the date, start or
+  duration changes it loops over the enrolled members and calls
+  `member_enrol_problem(..., ignore_class_id=class_id)` for each.
+  `remove_participant` refuses a started class and a member who has a
+  non-VOID bill for that class.
+- `line_to_class` - normalises the date and range-checks the values with
+  `validate_class_details(..., check_timing=False)` plus the sport list;
+  bad rows return None (hidden, but kept in the file by `rewrite_records`).
 - `coach_phone_in_use(phone, ignore_coach_id)` - two coaches can't share
   a phone number (checked when adding and when updating).
 - `validate_class_details(...)` - shared checks for scheduling and

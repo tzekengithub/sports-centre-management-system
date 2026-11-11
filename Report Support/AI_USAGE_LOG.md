@@ -685,6 +685,44 @@ Tool used: Claude Code (Anthropic), one continuous build session.
   pass. One old combo-box test assumed hours were still free today; it
   failed after 22:00 and now uses tomorrow.
 
+## Entry 28 - Tester's coaching round (N1-N11, U1-U5)
+- **Asked:** A tester's list of remaining bugs and possible GUI problems in
+  the coaching module, with suggested fixes.
+- **Produced:**
+  - `update_class`: re-checks every enrolled member when the date, start
+    or duration changes (N1); refuses a class that has started, and a fee
+    or duration change while a bill exists (N2).
+  - `cancel_class` refuses started classes (N4) and explains that a PAID
+    bill can never be voided, so such a class is kept (N10, confirmed in
+    `billing.void_bill`). The same wording fix was made for bookings in
+    booking.py, which had the same wrong advice ("void the bill").
+  - `delete_coach` and its question: an already-inactive coach gets
+    "already inactive, history kept" (N3).
+  - `remove_participant` refuses started classes and members with a bill
+    for the class; the Remove page explains why started classes are not
+    listed (N5).
+  - `line_to_class` range-checks what it loads and tidies the date (N9).
+  - Headers now have `Member N: name (student ID)` in all six files, and
+    a few `#` comments were added in `update_class` / `enrol_participant`
+    (N11). **The student IDs are blank (`________`): I don't have them.**
+  - GUI: "Nothing worked yet in this month" (U1); a hint under the private
+    class Member box (U2); Enrol reloads its list after a failed action
+    (U4, via a new `refresh_on_error` option of `build_pick_page`); the
+    tallest form fits the default window (U5, screenshot).
+- **Decision for the group (conflict with an earlier round):** round 2's
+  B2 asked that a class that is over could still have its fee/size
+  edited; this round's N2 asks the opposite, to protect the hours and
+  commission history. I followed the newest request (N2). If the group
+  prefers B2, `update_class`'s `class_has_started` check is the one line.
+- **Not done:** N7 (class vs court booking overlap): a class does not
+  reserve a court in this system, so it is out of scope. U4's periodic
+  refresh: pages already reload every time they are opened and the
+  action itself re-checks, so a stale row only costs an error message
+  (and now a reload); no timers were added.
+- **Verify:** N1-01 to N11-01 in `TEST_CASES.md`: 43 logic and 17 GUI
+  checks pass; earlier suites pass (two expectations updated: B2-01 and
+  the PAID-bill wording); crash run 169 clicks, no exception.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

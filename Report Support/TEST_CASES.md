@@ -188,7 +188,7 @@ workflow rules. "Actual" is what really happened, not a guess.
 | B1-01 | Sample IDs learnt at start | fresh data folder | id_counters.txt has CLS 2 | CLS 2 | PASS |
 | B1-02 | Deleted sample ID not reused | counter file removed, delete CLS001, schedule | New class is CLS003 | CLS003 | PASS |
 | B1-03 | Class with a bill can't be deleted | delete CLS002 (bill BIL002) | Refused, names BIL002 | Refused | PASS |
-| B2-01 | Fix a past class's fee | update a class dated yesterday, fee 30 | Saved | Saved | PASS |
+| B2-01 | Fix a past class's fee | update a class dated yesterday, fee 30 | Saved | Saved (SUPERSEDED in Entry 28: now refused, see N2-01) | PASS then |
 | B2-02 | Can't move a class into the past | change its date to 2 days ago | Refused | Refused | PASS |
 | B3-01 | Class already started today | enrol into a class starting this hour | Refused; class not in the Enrol list | Exactly so | PASS |
 | B4-01 | Delete question lists members | Delete beside CLS001 | Question says 2 members and names them | Exactly so | PASS |
@@ -241,6 +241,39 @@ workflow rules. "Actual" is what really happened, not a guess.
 | BKR1-01 | Reschedule | BKG002 to opening hour; clash; past date; past closing; bad court | Saved; the rest refused, booking unchanged | Exactly so | PASS |
 | BKR2-01 | Day sheet | Save Day Sheet for a day with 2 bookings | File in data/day_sheets lists both, total 3 hours | Exactly so | PASS |
 | BK-ALL | Every button, blank fields | crash run (104 clicks) | No uncaught exception | None raised | PASS |
+
+## Tester's coaching round N1-N11, U1-U5 (Entry 28)
+
+Two older results changed: **B2-01** (a past class's fee can be fixed) is
+now refused, because a class that has started is a record (N2); and the
+booking and class messages for a PAID bill changed, because a PAID bill
+can never be voided.
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| N1-01 | Move a class past a member's expiry | class with a member whose membership ends in 5 days, move it 10 days ahead | Refused: "membership ends"; class unchanged | Exactly so | PASS |
+| N1-02 | Move inside the membership | move to day 3 | Saved | Saved | PASS |
+| N1-03 | Move or lengthen into the member's other class | second class at 13:00, move to 10:00, or start 09:00 for 2 hours | Refused, names the other class | Exactly so | PASS |
+| N1-04 | Size-only change | max people 8 to 12 | Saved, no member check | Saved | PASS |
+| N2-01 | Started class edit | fee, or size, of a class dated yesterday | Refused "already started"; unchanged | Exactly so | PASS |
+| N2-02 | Billed class | change fee / duration of a class with an UNPAID bill | Refused, names the bill | Exactly so | PASS |
+| N2-03 | Billed class, size only | max people 8 to 10 | Saved | Saved | PASS |
+| N3-01 | Inactive coach delete | delete a coach twice | First: kept as INACTIVE. Second: "already inactive ... stay on record"; the confirm box says it too | Exactly so | PASS |
+| N4-01 | Started class delete | delete a class dated yesterday | Refused; still in classes.txt | Exactly so | PASS |
+| N5-01 | Remove a member with a bill | member with a PAID bill for that class | Refused, names the bill | Exactly so | PASS |
+| N5-02 | Remove without a bill / from a started class | | Removed / refused | Exactly so | PASS |
+| N5-03 | Remove page | open it | Started classes not listed; the page says why | Exactly so | PASS |
+| N7 | Class vs court booking overlap | | Not checked: a class does not book a court in this system (out of scope, noted in the report) | n/a | n/a |
+| N9-01 | Bad class rows | duration 0 and -2, max people 0, sport Chess, date 2026-02-30, Private for 3, hour 23, fee -5 and nan | Each loads as None (hidden) | All None | PASS |
+| N9-02 | Unpadded date | 2027-1-5 | Loads as 2027-01-05 | Exactly so | PASS |
+| N9-03 | Bad row kept | bad row in the file, then an enrol rewrite | Row still in classes.txt, hidden in the lists | Exactly so | PASS |
+| N10-01 | Paid class / booking | delete a class or cancel/move a booking whose bill is PAID | Message says a paid bill can't be voided, so it is kept as a record | Exactly so | PASS |
+| N10-02 | Billing void rule | void a PAID bill | "A PAID bill cannot be voided." (confirmed) | Exactly so | PASS |
+| U1-01 | Month with nothing worked | Hours & Commission, pick a month that has only upcoming classes | "Nothing worked yet in this month." | Exactly so | PASS |
+| U2-01 | Member hint | Manage Classes, choose Private | Hint under the Member box; hidden for Group | Exactly so | PASS |
+| U4-01 | Stale list | a class starts while Enrol is open; click Enrol | Error shown, and the list reloads without that class | Exactly so | PASS |
+| U5-01 | Laptop height | Manage Classes, Private form, default 1000 x 610 window; calendar pop-up | Nothing cut off; pop-up on screen | Fits with about 40 px spare | PASS |
+| N11-01 | Header | all six files | `Member N: name (student ID: ____)` line | Present (IDs to fill in) | PASS |
 
 ## Dark mode keeps your place (Entry 27)
 

@@ -1,6 +1,6 @@
 """
 Module      : membership.py
-Author      : Teoh Zynn
+Member 2    : Teoh Zynn (student ID: ________)
 Purpose     : Membership Registration module - lets the public register
               for a membership type (Annual, Monthly, Pay-As-You-Go, VIP,
               Youth, Senior, Family), and view, edit, renew or remove

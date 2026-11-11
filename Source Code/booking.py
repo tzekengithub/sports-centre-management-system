@@ -1,6 +1,6 @@
 """
 Module      : booking.py
-Author      : Teh Tze Ken
+Member 1    : Teh Tze Ken (student ID: ________)
 Purpose     : Facility & Court Booking module - a visual grid of court
               availability per hour for each sport, booking by clicking
               free slots, rescheduling, cancelling, viewing every booking
@@ -218,16 +218,33 @@ def booking_has_started(booking):
 BILL_FIELD_COUNT = 10
 
 
-def booking_bill_id(booking_id):
-    """Return the ID of a bill (not VOID) charging for this booking, or
-    None. Read straight from bills.txt (booking doesn't import billing)."""
+def booking_bill_info(booking_id):
+    """Return (bill_id, status) of a bill (not VOID) charging for this
+    booking, or None. Read straight from bills.txt (booking doesn't import
+    billing)."""
     for line in common.read_lines(common.BILLS_FILE):
         fields = common.split_fields(line, BILL_FIELD_COUNT)
         if fields is None:
             continue
         if fields[2] == "COURT" and fields[3] == booking_id and fields[8] != "VOID":
-            return fields[0]
+            return fields[0], fields[8]
     return None
+
+
+def booking_bill_id(booking_id):
+    """Return the ID of a bill (not VOID) charging for this booking, or None."""
+    bill_info = booking_bill_info(booking_id)
+    if bill_info is None:
+        return None
+    return bill_info[0]
+
+
+def bill_blocks_text(bill_info):
+    """Words for why a billed booking can't change. A PAID bill can never be
+    voided (billing refuses), so the booking then stays as it is."""
+    if bill_info[1] == "PAID":
+        return f"Bill {bill_info[0]} is paid and a paid bill can't be voided, so this booking stays as it is."
+    return f"Bill {bill_info[0]} charges for this booking. Void the bill in Billing first."
 
 
 def has_clash(booking_list, sport, court_no, date_text, start_hour, duration_hrs, ignore_id=None):
@@ -384,9 +401,9 @@ def cancel_booking(booking_id):
                 raise ValueError("This booking is already cancelled.")
             if booking_has_started(booking):
                 raise ValueError("This booking has already started or passed, so it stays as it is.")
-            bill_id = booking_bill_id(booking_id)
-            if bill_id is not None:
-                raise ValueError(f"Bill {bill_id} charges for this booking. Void the bill in Billing first.")
+            bill_info = booking_bill_info(booking_id)
+            if bill_info is not None:
+                raise ValueError(bill_blocks_text(bill_info))
             booking.set_status("CANCELLED")
     if not booking_found:
         raise ValueError(f"No booking found with ID {booking_id}.")
@@ -409,9 +426,12 @@ def reschedule_booking(booking_id, new_date_text, new_start_hour, new_court_no):
         raise ValueError("Only confirmed bookings can be rescheduled.")
     if booking_has_started(booking):
         raise ValueError("This booking has already started or passed, so it can't be moved.")
-    bill_id = booking_bill_id(booking_id)
-    if bill_id is not None:
-        raise ValueError(f"Bill {bill_id} already shows this booking's time. Void the bill first, "
+    bill_info = booking_bill_info(booking_id)
+    if bill_info is not None and bill_info[1] == "PAID":
+        raise ValueError(f"Bill {bill_info[0]} is paid and a paid bill can't be voided, so this booking "
+                         "stays as it is.")
+    if bill_info is not None:
+        raise ValueError(f"Bill {bill_info[0]} already shows this booking's time. Void the bill first, "
                          "then reschedule and bill it again.")
     new_date_text = check_booking_time(new_date_text, new_start_hour)
     check_member_can_book(booking.get_member_id(), new_date_text)
