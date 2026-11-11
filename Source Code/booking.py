@@ -680,7 +680,9 @@ def build_booking_tab(parent):
 
 
 def booking_rows(search_text, upcoming_only):
-    """Return (booking_id, row_text) for the list pages, soonest first.
+    """Return (booking_id, row_text, colour_kind) for the list pages, soonest
+    first. The colour kind is 'bad' (red) for CANCELLED, 'quiet' (grey) for a
+    booking that has started and 'good' (green) for a confirmed upcoming one.
     upcoming_only True lists CONFIRMED bookings that haven't started (with
     the member's name); False lists every booking with its status."""
     booking_list = load_all_bookings()
@@ -706,8 +708,41 @@ def booking_rows(search_text, upcoming_only):
             row_text += f"{common.fit_text(member_text, MEMBER_COLUMN_WIDTH - 1):<{MEMBER_COLUMN_WIDTH}}"
         else:
             row_text += f"{booking.get_member_id():<10}{booking.get_status():<9}"
-        rows.append((booking_id, row_text))
+        if booking.get_status() == "CANCELLED":
+            row_kind = "bad"
+        elif booking_has_started(booking):
+            row_kind = "quiet"
+        else:
+            row_kind = "good"
+        rows.append((booking_id, row_text, row_kind))
     return rows
+
+
+def booking_badges(booking_id):
+    """Return coloured badges (text, kind) for one booking: its status,
+    whether it is upcoming or has started, and whether it has been billed."""
+    booking = find_booking_by_id(load_all_bookings(), booking_id)
+    if booking is None:
+        return []
+    badge_list = []
+    cancelled = booking.get_status() == "CANCELLED"
+    if cancelled:
+        badge_list.append(("CANCELLED", "bad"))
+    else:
+        badge_list.append(("CONFIRMED", "good"))
+        if booking_has_started(booking):
+            badge_list.append(("STARTED / PAST", "quiet"))
+        else:
+            badge_list.append(("UPCOMING", "info"))
+    bill_info = booking_bill_info(booking_id)
+    if bill_info is None:
+        # A cancelled booking doesn't need a bill; a confirmed one still does.
+        badge_list.append(("NOT BILLED", "quiet" if cancelled else "warn"))
+    elif bill_info[1] == "PAID":
+        badge_list.append((f"PAID  {bill_info[0]}", "good"))
+    else:
+        badge_list.append((f"UNPAID  {bill_info[0]}", "bad"))
+    return badge_list
 
 
 def describe_booking(booking_id):
@@ -823,8 +858,8 @@ def build_cancel_page(page_frame):
                 f"{booking_time_text(booking)})? This frees the court for others.")
 
     return common.build_pick_page(page_frame, UPCOMING_LIST_HEADER, load_rows, "Cancel Booking",
-                                  cancel_action, describe=describe_booking, build_form=build_form,
-                                  fill_form=fill_form, confirm_text=cancel_question,
+                                  cancel_action, describe=describe_booking, badges=booking_badges,
+                                  build_form=build_form, fill_form=fill_form, confirm_text=cancel_question,
                                   danger=True, search_label=SEARCH_LABEL, empty_text="No upcoming bookings.",
                                   action_tip="Cancel the hours chosen above (the whole booking unless you "
                                              "change them). Cancelled hours stay on record as CANCELLED.")
@@ -849,7 +884,8 @@ def build_view_all_page(page_frame):
         return "Bookings on record: " + ", ".join(parts) + ". Cancelled bookings are kept, never deleted."
 
     return common.build_pick_page(page_frame, ALL_LIST_HEADER, load_rows, None, None,
-                                  describe=describe_booking, search_label=SEARCH_LABEL,
+                                  describe=describe_booking, badges=booking_badges,
+                                  search_label=SEARCH_LABEL,
                                   summary_text=summary_text, empty_text="No bookings found.")
 
 
@@ -934,8 +970,8 @@ def build_reschedule_page(page_frame):
                 f"Court {court_no}?")
 
     return common.build_pick_page(page_frame, UPCOMING_LIST_HEADER, upcoming_rows, "Reschedule",
-                                  reschedule_action, describe=describe_booking, build_form=build_form,
-                                  fill_form=fill_form, confirm_text=reschedule_question,
+                                  reschedule_action, describe=describe_booking, badges=booking_badges,
+                                  build_form=build_form, fill_form=fill_form, confirm_text=reschedule_question,
                                   search_label=SEARCH_LABEL, empty_text="No upcoming bookings.",
                                   action_tip="Move the booking you clicked to the date, time and court above.")
 

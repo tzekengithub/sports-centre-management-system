@@ -111,6 +111,7 @@ THEMES = {
         "LIST_BORDER_COLOR": "#8a929c", "FREE_COLOR": "#d8efe0", "BOOKED_COLOR": "#f3d3d3",
         "SELECTED_COLOR": "#f6c453", "PAST_COLOR": "#e3e6ea", "DISABLED_TEXT_COLOR": "#9aa3ad",
         "TOOLTIP_BG": "#fff8dc", "TOOLTIP_TEXT_COLOR": "#2b2b2b", "SELECTED_TEXT_COLOR": "#1f2328",
+        "INFO_COLOR": "#d3e4f7",
     },
     "dark": {
         "APP_BG": "#1c2026", "PANEL_BG": "#272c34", "TEXT_COLOR": "#e6e8eb",
@@ -119,6 +120,7 @@ THEMES = {
         "LIST_BORDER_COLOR": "#4b535e", "FREE_COLOR": "#245a40", "BOOKED_COLOR": "#6e3030",
         "SELECTED_COLOR": "#e0a83a", "PAST_COLOR": "#353b44", "DISABLED_TEXT_COLOR": "#6c7480",
         "TOOLTIP_BG": "#3a3f47", "TOOLTIP_TEXT_COLOR": "#f2f2f2", "SELECTED_TEXT_COLOR": "#14171b",
+        "INFO_COLOR": "#2a4a70",
     },
 }
 THEME_NAMES = ("light", "dark")
@@ -153,6 +155,7 @@ FREE_COLOR = "#d8efe0"
 BOOKED_COLOR = "#f3d3d3"
 SELECTED_COLOR = "#f6c453"
 SELECTED_TEXT_COLOR = "#1f2328"
+INFO_COLOR = "#d3e4f7"
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 560
 BUTTON_WIDTH = 10
@@ -172,7 +175,7 @@ def apply_theme(theme_name):
     global APP_BG, PANEL_BG, TEXT_COLOR, ACCENT_COLOR, BUTTON_COLOR, BUTTON_TEXT_COLOR
     global DANGER_COLOR, MUTED_TEXT_COLOR, BORDER_COLOR, LIST_BORDER_COLOR, FREE_COLOR
     global BOOKED_COLOR, SELECTED_COLOR, PAST_COLOR, DISABLED_TEXT_COLOR, TOOLTIP_BG, TOOLTIP_TEXT_COLOR
-    global SELECTED_TEXT_COLOR
+    global SELECTED_TEXT_COLOR, INFO_COLOR
     if theme_name not in THEMES:
         theme_name = "light"
     palette = THEMES[theme_name]
@@ -194,6 +197,7 @@ def apply_theme(theme_name):
     TOOLTIP_BG = palette["TOOLTIP_BG"]
     TOOLTIP_TEXT_COLOR = palette["TOOLTIP_TEXT_COLOR"]
     SELECTED_TEXT_COLOR = palette["SELECTED_TEXT_COLOR"]
+    INFO_COLOR = palette["INFO_COLOR"]
     current_theme["name"] = theme_name
 
 
@@ -201,12 +205,29 @@ def apply_theme(theme_name):
 # and text options are mapped separately because a light-theme value can be
 # shared between roles (white is both a panel background and button text).
 BACKGROUND_ROLES = ("APP_BG", "PANEL_BG", "BUTTON_COLOR", "DANGER_COLOR", "FREE_COLOR", "BOOKED_COLOR",
-                    "SELECTED_COLOR", "PAST_COLOR", "BORDER_COLOR", "LIST_BORDER_COLOR", "TOOLTIP_BG")
+                    "SELECTED_COLOR", "PAST_COLOR", "BORDER_COLOR", "LIST_BORDER_COLOR", "TOOLTIP_BG", "INFO_COLOR")
 TEXT_ROLES = ("TEXT_COLOR", "ACCENT_COLOR", "BUTTON_TEXT_COLOR", "MUTED_TEXT_COLOR", "DISABLED_TEXT_COLOR",
               "TOOLTIP_TEXT_COLOR", "DANGER_COLOR")
 BACKGROUND_OPTIONS = ("bg", "activebackground", "highlightbackground", "highlightcolor", "selectcolor",
                       "troughcolor", "disabledbackground", "readonlybackground", "selectbackground")
 TEXT_OPTIONS = ("fg", "activeforeground", "disabledforeground", "insertbackground", "selectforeground")
+
+
+def status_colours(kind):
+    """Return (background, text colour) for a status kind, used for list rows
+    and badges: 'good' (green), 'bad' (red), 'warn' (amber), 'info' (blue),
+    'quiet' (grey). Read from the current palette each time."""
+    match kind:
+        case "good":
+            return FREE_COLOR, TEXT_COLOR
+        case "bad":
+            return BOOKED_COLOR, TEXT_COLOR
+        case "warn":
+            return SELECTED_COLOR, SELECTED_TEXT_COLOR
+        case "info":
+            return INFO_COLOR, TEXT_COLOR
+        case _:
+            return PAST_COLOR, MUTED_TEXT_COLOR
 
 
 def make_colour_map(old_theme_name, new_theme_name, role_names):
@@ -237,6 +258,13 @@ def recolour_widgets(root_window, old_theme_name, new_theme_name):
                 except tk.TclError:
                     # This kind of widget doesn't have that option.
                     pass
+        # List rows can each have their own colours (itemconfig): map those too.
+        if widget.winfo_class() == "Listbox":
+            for row_index in range(widget.size()):
+                for item_option, item_map in (("background", background_map), ("foreground", text_map)):
+                    item_colour = str(widget.itemcget(row_index, item_option)).lower()
+                    if item_colour in item_map:
+                        widget.itemconfig(row_index, **{item_option: item_map[item_colour]})
         # Options nobody sets get their colour from the option database's
         # "*Foreground" (a text colour), so those two options use the text map.
         for option in ("activebackground", "selectbackground"):
@@ -251,7 +279,8 @@ def recolour_widgets(root_window, old_theme_name, new_theme_name):
             if widget.winfo_class() in ("Entry", "Canvas"):
                 widget.config(selectbackground=TEXT_COLOR, selectforeground=PANEL_BG)
             # Dark text sits on the amber "selected" colour in both themes.
-            if widget.winfo_class() == "Button" and str(widget.cget("bg")).lower() == SELECTED_COLOR.lower():
+            if (widget.winfo_class() in ("Button", "Label") and str(widget.cget("bg")).lower() == SELECTED_COLOR.lower()
+                    and str(widget.cget("text")).strip() != ""):
                 widget.config(fg=SELECTED_TEXT_COLOR, activeforeground=SELECTED_TEXT_COLOR)
         except tk.TclError:
             pass
@@ -860,10 +889,14 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
                     describe=None, build_form=None, fill_form=None, confirm_text=None,
                     danger=False, search_label=None, summary_text=None,
                     empty_text="Nothing to show here.", result_title="Done", action_tip=None,
-                    refresh_on_error=False):
+                    refresh_on_error=False, badges=None):
     """Build a "pick one, then act" page: a list on the left and, on the
     right, the picked row's details plus ONE action button.
-      load_rows(search_text)  -> list of (row_id, row_text) to list
+      load_rows(search_text)  -> list of (row_id, row_text[, kind]) to list;
+                                 kind ('good', 'bad', 'warn', 'info',
+                                 'quiet') colours that row
+      badges(row_id)          -> list of (text, kind) shown as coloured
+                                 badges above the details (optional)
       describe(row_id)        -> details text for the picked row
       build_form(form_frame)  -> adds input fields once (optional)
       fill_form(row_id)       -> fills those fields when a row is picked
@@ -903,6 +936,9 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
                              anchor="w", justify="left", wraplength=520)
     summary_label.pack(side="top", fill="x", pady=(6, 0))
 
+    # Coloured badges (e.g. CONFIRMED, NOT BILLED) sit above the details.
+    badge_row = tk.Frame(card, bg=PANEL_BG)
+
     # Monospace so the "Label:  value" lines from details_text line up.
     details_label = tk.Label(card, text="", font=MONO_FONT, bg=PANEL_BG, justify="left",
                              anchor="w", width=DETAIL_LABEL_WIDTH + DETAIL_VALUE_WIDTH)
@@ -916,7 +952,16 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
         form_frame.pack_forget()
         if action_button is not None:
             action_button.pack_forget()
+        badge_row.pack_forget()
+        for old_badge in badge_row.winfo_children():
+            old_badge.destroy()
         row_id = pick_state["row_id"]
+        if row_id is not None and badges is not None:
+            for badge_text, badge_kind in badges(row_id):
+                badge_bg, badge_fg = status_colours(badge_kind)
+                tk.Label(badge_row, text=badge_text, font=BUTTON_FONT, bg=badge_bg, fg=badge_fg,
+                         padx=7, pady=2).pack(side="left", padx=(0, 5))
+            badge_row.pack(side="top", anchor="w", pady=(0, 8), before=details_label)
         if row_id is None:
             if len(row_ids) == 0:
                 details_label.config(text=empty_text)
@@ -941,9 +986,13 @@ def build_pick_page(page_frame, list_header, load_rows, action_label, action_fun
             search_text = search_entry.get().strip()
         listbox.delete(0, tk.END)
         row_ids.clear()
-        for row_id, row_text in load_rows(search_text):
-            listbox.insert(tk.END, row_text)
-            row_ids.append(row_id)
+        for row in load_rows(search_text):
+            listbox.insert(tk.END, row[1])
+            row_ids.append(row[0])
+            # An optional third item colours the row (green / red / grey ...).
+            if len(row) > 2 and row[2] != "":
+                row_bg, row_fg = status_colours(row[2])
+                listbox.itemconfig(tk.END, background=row_bg, foreground=row_fg)
         if summary_text is not None:
             summary_label.config(text=summary_text())
         pick_state["row_id"] = None

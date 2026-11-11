@@ -417,3 +417,14 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-02 | Very short window | window 330 px high, click the arrow | Fewer rows shown, list still inside the window | Exactly so | PASS |
 | DD-03 | Box near the top | Manage Classes coach box | Still opens downward, inside the window | Exactly so | PASS |
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
+
+
+## Booking colours and badges
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| CL-01 | Row colours | View All Bookings | CONFIRMED upcoming green, CANCELLED red, started grey | Exactly so | PASS |
+| CL-02 | Badges | pick a paid / unbilled / unpaid / cancelled / started booking | CONFIRMED or CANCELLED; UPCOMING or STARTED / PAST; PAID (green), NOT BILLED (amber), UNPAID (red); a cancelled booking's NOT BILLED is grey | Exactly so for all five | PASS |
+| CL-03 | Dark mode | switch with a row picked | Rows and badges recoloured in place; selection kept; a newly picked cancelled booking is red | Exactly so | PASS |
+| CL-04 | Cancel / Reschedule pages | open each, pick a booking | Green rows and 3 badges | Exactly so | PASS |
+| CL-05 | All pages after the switch | compare every widget with a fresh dark start | No differences | 2,942 widgets, 0 differences | PASS |
