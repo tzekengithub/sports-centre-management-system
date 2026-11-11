@@ -886,8 +886,8 @@ COACHING_ACTIONS = [
      "Click Delete beside a coach to remove them (a coach with past classes is kept as Inactive)."),
     ("Manage Classes", "Schedule, update or delete classes",
      "Blank form = schedule a new class (for a private session, pick its member). Click a class to "
-     "update it, then Save Changes. Click Delete beside a class to cancel it. Grey rows are over: "
-     "they are kept as a record and can't be edited or deleted."),
+     "update it, then Save Changes. Click Delete beside a class to cancel it. Grey rows have started "
+     "(over or under way): they are kept as a record and can't be edited or deleted."),
     ("Enrol Member", "Add a member to a class",
      "Click a class that hasn't started, pick the member on the right, then click Enrol. Full "
      "classes and members whose membership ends before the class are not listed."),
