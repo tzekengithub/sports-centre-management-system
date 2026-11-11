@@ -747,3 +747,34 @@ Checked by driving the buttons in a launched window.
   window sizes) without a screenshot tool, and exercise `OptionMenu`
   dropdowns via an actual mouse click (their underlying `StringVar` was
   driven directly instead, which exercises the same code path).
+
+### Entry: Booking grid multi-select and faster clicks
+- **Prompt:** user reported they could not book separate slots (e.g. 10:00 and 16:00) in one go, and that every grid click felt slow.
+- **AI output:** `booking.py`: grid cell click now toggles a cell in a set and recolours cells in place (no full redraw); new `group_into_blocks` and `create_bookings` (validate every block first, then save one booking per run of consecutive hours); `on_book` shows a summary of all bookings.
+- **Verify:** pick two separated blocks plus a cell on another court, choose a member, press Book, and check three bookings appear. Checked by the AI through the real window and by calling `create_bookings` directly (sample data restored afterwards).
+- **Not done:** cancelling one hour of a longer booking is still whole-booking only.
+
+### Entry: Partial cancel of a booking
+- **Prompt:** user wanted cancelling 10-11 of a 10-14 booking to cancel only that hour.
+- **AI output:** `booking.py`: new `cancel_booking_hours` (original ID keeps the cancelled hours as CANCELLED; hours before/after become new CONFIRMED bookings, one file write); Cancel page gets 'Cancel from' / 'Cancel until' drop-downs, defaulting to the whole booking.
+- **Verify:** book 4 hours, cancel the middle two on the Cancel page, check View All Bookings shows one CANCELLED and two CONFIRMED pieces. The AI drove this through the real window and tested front/back/whole/invalid ranges (sample data restored afterwards).
+
+### Entry: Home header (greeting, ADMIN label, shortcut buttons, live clock)
+- **Prompt:** a pasted brief from a team member asking for a greeting that follows the time of day, an ADMIN label, a welcome line, three shortcut buttons (Book a Court, Register Member, Create Bill) and a live clock card on the Home page.
+- **AI output:** `main.py`: `greeting_text`, `clock_text`, `date_text`, `start_clock`, `build_home_header`, a `SHORTCUTS` list; `switch_to_tab(tab, page=None)` now opens a page directly. `common.py`: `build_action_menu` stores an `open_action_page` function on the tab frame (same code as the menu buttons). The clock uses `datetime`, not `time`, because only `datetime` is on the allowed import list. Docs updated.
+- **Verify:** start the program: the greeting matches the time of day, the clock changes every second, each shortcut opens the right page, Dark Mode recolours the header. The AI ran these through the real window (screenshots of light and dark Home) and re-ran 174 logic and GUI checks (see `TEST_CASES.md`). Display scaling 125 % and 150 % was not checked.
+
+### Entry: Home header restyle (rounded, glowing, dashboard look)
+- **Prompt:** a pasted brief asking the Home header to look like a reference picture: dark, rounded, glowing clock card, pill badge and three rounded shortcut buttons, using only what tkinter really has.
+- **AI output:** `main.py`: `HEADER_PALETTE`, `mix_colour`, `round_rect`, `draw_halo`, `timezone_text`, `clock_parts`, `class PillButton`, `class HomeHeader`; `start_clock` now takes the header; the Dark/Light button redraws the header. No image, no extra module. Docs and screenshots (`home_dark.png`, `home_light.png`) added.
+- **Verify:** start the program in both modes and compare with the screenshots; watch the seconds for flicker; Tab to a shortcut button and press Enter. The AI ran these through the real window (26 header checks) and re-ran 174 logic and GUI checks. Display scaling 125 % and 150 % was not checked.
+
+### Entry: Membership picture cards on the Register page
+- **Prompt:** a pasted brief asking for clickable picture cards for the 7 membership types, with a caption built from `common.py`, text-card fallback, a selected marker and light/dark support.
+- **AI output:** `membership.py`: `load_card_picture`, `type_caption`, picture cards in `build_register_page`; `common.py`: `IMAGES_FOLDER`. The 7 supplied files were JPEGs named .png (Tk cannot load them), so they were converted once to real 216x118 PNG with Pillow outside the program (no library added to the program).
+- **Verify:** open Membership > Register: 7 picture cards, click each, check the coloured frame moves; rename a picture and check the text card appears. The AI ran these in the real window (18 checks) in both themes. Display scaling 125 % and 150 % was not checked.
+
+### Entry: V6 fixes (U4, N12, U7) and student IDs
+- **Prompt:** a pasted list of three fixes plus the four members' student IDs.
+- **AI output:** `coaching.py`: Remove Member page now passes `refresh_on_error=True` (U4); `class_bill_info` reports a PAID bill first and `update_class` says "already paid, can't be voided" for PAID and keeps "void it first" for UNPAID (N12; unused `class_bill_id` removed); `class_rows` greys a class as soon as it has started, and its `delete_question` returns None for a started class (U7). `common.py` `build_manage_page`: a `delete_question` of None skips the confirm box (shared change, other modules unaffected, tell teammates). Student IDs filled in the five file headers.
+- **Verify:** edit the fee of a class with a PAID bill; make a class start this hour and press Delete (no question, "kept as a record" message, row greyed). The AI ran these in the real window; sample data restored. The Remove Member reload (U4) was not driven through the GUI.

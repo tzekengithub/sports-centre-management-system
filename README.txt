@@ -29,6 +29,7 @@ Sports Centre System/
 |       |-- id_counters.txt, settings.txt   (ID counters, light/dark theme)
 |       |-- receipts/      (one .txt receipt per payment)
 |       |-- day_sheets/    (printable booking lists from Save Day Sheet)
+|   |-- images/            (membership card pictures card_<type>.png; the ZIP must include it)
 |-- README.txt             (this file)
 |-- Report Support/        (rubric check, flowcharts, test cases, audit
 |                            report, AI usage log, etc.)
@@ -48,7 +49,10 @@ Step 3: Run the program:
 Step 4: One window opens with a row of tabs along the top: Home,
         Booking, Membership, Coaching, Billing and a red Exit. Click a
         tab (or a module button on the Home tab) to switch to that
-        module in the same window. Each tab asks "What would you like
+        module in the same window. The Home tab starts with a greeting
+        (Good Morning / Afternoon / Evening), an ADMIN label, three
+        shortcut buttons (Book a Court, Register Member, Create Bill)
+        and a live clock with the date. Each tab asks "What would you like
         to do?" - click an action (e.g. Register, Book a Court, Pay
         Bill) and it opens on its own page with one line of
         instructions. "Back" returns to the actions. "Dark Mode" (top

@@ -16,6 +16,22 @@ each of the four modules. For a one-page cheat sheet instead, see
 3. One window opens with a row of tabs along the top: **Home**,
    **Booking**, **Membership**, **Coaching**, **Billing**, and a red
    **Exit**. Everything stays in this one window.
+
+   **The Home header.** At the top of Home, a small green dot, a large
+   greeting that follows the time of day (*Good Morning!* from 05:00,
+   *Good Afternoon!* from 12:00, *Good Evening!* from 18:00) and an
+   **ADMIN** badge (only a label: the program has no log-in). Under it is
+   a one-line welcome and three rounded shortcut buttons: **Book a Court**
+   opens Booking > Book a Court, **Register Member** opens Membership >
+   Register, and **Create Bill** opens Billing > Create Bill. You can click
+   them, or press Tab to reach one and Enter or Space to use it. On the
+   right is a clock card with the time as HH : MM : SS, AM or PM, the date
+   (for example *Wednesday - Nov 11, 2026*) and your time zone (for example
+   *GMT+8*); it updates every second. In Dark Mode the card and the main
+   button glow softly; in Light Mode they have a plain white card and a
+   faint shadow. If the window is made narrow, the clock card moves below
+   the buttons.
+
 4. The first time it runs, the program creates a `data` folder next to
    `main.py` with a few sample records already in it, so every screen
    has something to look at immediately. Deleting that folder and
@@ -75,7 +91,7 @@ cancelled or moved until the bill is voided in Billing.
 
 | Action | What you do |
 |---|---|
-| **Register** | Type the name and phone, click a membership card (each shows the fee, how long it lasts and the member discount), then **Register**. The new Member ID is shown. |
+| **Register** | Type the name and phone, click a membership picture card (the caption under it shows the fee, how long it lasts and the member discount; the chosen card gets a thick coloured frame; a type with no picture shows a text card), then **Register**. The new Member ID is shown. |
 | **Renew Membership** | Click the member, **Renew**. It's extended from today. |
 | **Manage Members** | Everyone with their type, expiry and Active/Expired status; the line underneath shows members per type and how many expire within 30 days. **Click a member** to change name/phone/type, then **Save Changes**. **Delete** beside a member removes them — not allowed while they have an upcoming booking or an unpaid bill. New members are added with **Register**. |
 

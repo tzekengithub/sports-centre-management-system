@@ -344,6 +344,57 @@ Cases whose **expected result changed** since they were first written
 | TAB-06 | Clicking the tab you are on | open Billing > Pay Bill, click Billing | Back to the Billing menu | Menu shown | PASS |
 | TAB-07 | Every action done through its page | Register, Renew, add coach (inf rate rejected), Schedule, Enrol, Remove Member, Cancel Class, Book, Cancel, Delete booking, Create Bill, Pay (nan rejected, change RM 12.00), View Receipt | Each succeeds with a clear message | All succeeded | PASS |
 
+## Home header, multi-book and partial cancel (2026-11-11 re-run)
+
+On a fresh `data/` folder, the logic cases of the sections above were
+re-run by one script that imports the real modules (**119 checks, 0
+failed**), and the GUI cases by a second script that drives the real
+window with `.invoke()` (**55 checks, 0 failed**). They cover MEM-01 to
+MEM-11 and MEM-13, COA-01 to COA-12, BKG-01 to BKG-10, BKG-12 and BKG-15,
+BIL-01 to BIL-12, GEN-01 to GEN-05, FIX-02/03/05 to FIX-12, INH-01 to
+INH-04 and INH-06, T1/T2/T3/T6/T7/T9/T10, B1-03, B7-01, N1-01, N2-01,
+N4-01, N5-02, N9-01/02, N10, BK4-02, BK6-01, BKR1/BKR2, TAB-01/02/05/06,
+DM-01/03, DARK-03, EXIT-01 to EXIT-03 and TIP-01 (Home page only).
+**Not repeated this time** (they need typed text, timing or a read-only
+file, so their earlier results still stand): MEM-12, COA-13/14,
+BKG-13/14 (replaced by BKG-16 to BKG-21 below), BIL-13/14, TIP-02/03,
+UNIT, the CB, DM-02/04/05 and T4/T5/T8/B15/B16/G/BK1-BK10 GUI cases, and
+the coaching GUI cases FIX-01/04, MC-01 to MC-12, U1 to U5. Two script
+mistakes were fixed while writing the re-run (a sample member whose
+membership ends in 10 days, and a pop-up left open by the click-through);
+the program code needed no change.
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| HOME-01 | Greeting by hour | `greeting_text` for 0, 4, 5, 11, 12, 17, 18, 23 | Evening, Evening, Morning, Morning, Afternoon, Afternoon, Evening, Evening | Exactly so | PASS |
+| HOME-02 | Date text | 2026-11-11 and 2026-01-05 | "Wednesday - Nov 11, 2026" and "Monday - Jan 5, 2026" (no leading zero on the day) | Exactly so | PASS |
+| HOME-03 | Header shows | open the program | Greeting, ADMIN label, welcome line, three shortcut buttons, clock card | All shown (screenshot checked, light and dark) | PASS |
+| HOME-04 | Clock ticks | read the time label twice, 3.2 s apart; again when started from another folder | The time changes | 09:53:15 AM then 09:53:18 AM; the other run also changed | PASS |
+| HOME-05 | Shortcut buttons | click Book a Court, Register Member, Create Bill | Each opens its own page; the tab menu is hidden | All three landed on the right page | PASS |
+| HOME-06 | Dark mode on the header | click Dark Mode on Home | Greeting, clock card and buttons recolour at once | Greeting #2f6f4e to #7fd1a6, clock card #272c34 with text #e6e8eb (first, plain header; the canvas header is covered by HOME-10, HOME-15 and HOME-16) | PASS |
+| HOME-07 | Fits the window | 1000 x 610 window | No widget past the window edge | None past the edge | PASS |
+| HOME-08 | Clock stops with its page | switch tabs many times and close the program | No error from the 1-second timer | 0 uncaught exceptions | PASS |
+| HOME-09 | Hover hints | every button on Home | A hint for each | No plain button on Home without one (the three rounded shortcut buttons get theirs from `add_tooltip` in `PillButton`) | PASS |
+| BKG-16 | Book separate hours in one go | pick 10:00, 11:00 and 15:00 on Court 1 and 12:00 on Court 2, Book | 3 bookings: Court 1 10-12, Court 1 15-16, Court 2 12-13 | 3 bookings created | PASS |
+| BKG-17 | Multi-book is all or nothing | pick a free hour on Court 2 plus a taken hour on Court 1 | Refused; nothing saved | Refused; Court 2 hour not saved | PASS |
+| BKG-18 | Partial cancel (Cancel page) | book 10-14, cancel 11:00 until 13:00 | 11-13 CANCELLED under the original ID; 10-11 and 13-14 new CONFIRMED bookings | BKG004 11-13 CANCELLED, BKG005 10-11 and BKG006 13-14 CONFIRMED | PASS |
+| BKG-19 | Cancel one hour from the grid | click a red hour of a 10-14 booking, answer Yes | Only that hour cancelled; the grid shows it free again | 11-12 CANCELLED, 10-11 and 12-14 kept; 4 red squares became 3 | PASS |
+| BKG-20 | Cancel range checks | hours outside the booking, an empty range, an already cancelled booking | Each refused | All refused | PASS |
+| BKG-21 | Grid click speed | click two free squares | No redraw of the whole grid | 7 to 11 ms per click; both squares show the tick | PASS |
+| HOME-10 | Restyle: shapes | open Home in Dark and Light Mode | Dot + greeting + pill badge; rounded buttons (one filled with a glow, two outlined with a symbol); rounded clock card with glowing HH : MM : SS, AM label, date and GMT label | All shown; `Report Support/home_dark.png` and `home_light.png` | PASS |
+| HOME-11 | No flicker | read the canvas item ids and count 2.3 s apart | Same items; only their text changed | Same ids, same count | PASS |
+| HOME-12 | Time zone text | UTC offsets +8, 0, -5, +5:30, -3:30 | GMT+8, GMT, GMT-5, GMT+5:30, GMT-3:30 | Exactly so | PASS |
+| HOME-13 | Button states | mouse over, press, leave on Book a Court | Colour changes on hover and press; leave restores it | Exactly so | PASS |
+| HOME-14 | Keyboard | focus Create Bill, press Enter and Space | The button's command runs each time; all three canvases take focus | Exactly so | PASS |
+| HOME-15 | Theme toggles | Dark / Light 6 times in a row | No error; canvas item count the same each time in the same theme (no leftovers) | Same count per theme; no exception | PASS |
+| HOME-16 | Shortcuts in both themes | Book a Court, Register Member, Create Bill in Light and in Dark | Each opens its own page; menu hidden | Exactly so | PASS |
+| HOME-17 | Narrow window | make the window 760 px wide (the program itself stops at 1000) | Clock card drops below the buttons; no overlap; inside the window | Exactly so (screenshot checked) | PASS |
+| HOME-18 | Back to 1000 x 610 | widen again | Clock card beside the buttons, no overlap | Exactly so | PASS |
+
+Known cosmetic difference found while checking dark mode (it was there before
+this change): after Light > Dark > Light, the amber "today" button in the
+calendar pop-up keeps dark text instead of white.
+
 ## What this does NOT cover
 
 Pixel-level layout (text wrapping, overlap at unusual window sizes) was
@@ -353,3 +404,6 @@ not checked - no screenshot tool was available in this environment.
 runs the same code path a real click would but was not literally a mouse
 click. See `AUDIT_REPORT.md` for the full list of what was fixed and
 what remains a documented decision rather than a defect.
+
+The Home page was screenshotted in light and dark mode on this machine
+(1000 x 610 window); other display scaling (125 %, 150 %) was not checked.

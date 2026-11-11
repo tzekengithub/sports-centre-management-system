@@ -1,6 +1,6 @@
 """
 Module      : billing.py
-Member 4    : Low Yee Zhe (student ID: ________)
+Member 4    : Low Yee Zhe (student ID: 26PMD08257)
 Purpose     : Billing, Payments & Finance module - create bills, take
               payments with receipts, and daily revenue summaries that
               separate court rentals, coaching, retail sales and
@@ -987,7 +987,7 @@ def build_revenue_page(section_frame, page_hooks):
                                                               sticky="we", pady=6)
         tk.Label(card, text="Total collected", font=common.BUTTON_FONT, bg=common.PANEL_BG,
                  anchor="w").grid(row=row_index + 1, column=0, sticky="w")
-        tk.Label(card, text=f"RM {grand_total:>9.2f}", font=common.scaled_font(("Consolas", 11, "bold"), common.current_zoom["percent"]), bg=common.PANEL_BG,
+        tk.Label(card, text=f"RM {grand_total:>9.2f}", font=("Consolas", 11, "bold"), bg=common.PANEL_BG,
                  fg=common.ACCENT_COLOR).grid(row=row_index + 1, column=1, sticky="e", padx=(0, 12))
         void_count = bill_count - paid_count - unpaid_count
         count_label.config(text=(f"{bill_count} bill(s) dated {date_text}: {paid_count} paid, "

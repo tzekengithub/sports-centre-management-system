@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 # "python main.py" from Source Code/, or from any other folder.
 BASE_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DATA_FOLDER = os.path.join(BASE_FOLDER, "data")
+IMAGES_FOLDER = os.path.join(BASE_FOLDER, "images")   # membership card pictures (.png)
 RECEIPT_FOLDER = os.path.join(DATA_FOLDER, "receipts")
 
 MEMBERS_FILE = os.path.join(DATA_FOLDER, "members.txt")
@@ -134,23 +135,18 @@ LIST_BORDER_COLOR = "#8a929c"
 PAST_COLOR = "#e3e6ea"
 DISABLED_TEXT_COLOR = "#9aa3ad"
 TOOLTIP_TEXT_COLOR = "#2b2b2b"
-BASE_TITLE_FONT = ("Segoe UI", 16, "bold")
-BASE_LABEL_FONT = ("Segoe UI", 10)
-BASE_ENTRY_FONT = ("Segoe UI", 10)
-BASE_MONO_FONT = ("Consolas", 10)
-BASE_BUTTON_FONT = ("Segoe UI", 10, "bold")
-BASE_SMALL_FONT = ("Segoe UI", 9)
-BASE_HEADING_FONT = ("Segoe UI", 11, "bold")
-# The fonts widgets actually use: the base ones scaled by the zoom (apply_zoom).
-TITLE_FONT = BASE_TITLE_FONT
-LABEL_FONT = BASE_LABEL_FONT
-ENTRY_FONT = BASE_ENTRY_FONT
-MONO_FONT = BASE_MONO_FONT
-BUTTON_FONT = BASE_BUTTON_FONT
-SMALL_FONT = BASE_SMALL_FONT
-HEADING_FONT = BASE_HEADING_FONT
-ZOOM_LEVELS = (80, 100, 120, 140, 160)
-current_zoom = {"percent": 100}
+TITLE_FONT = ("Segoe UI", 16, "bold")
+LABEL_FONT = ("Segoe UI", 10)
+ENTRY_FONT = ("Segoe UI", 10)
+MONO_FONT = ("Consolas", 10)
+BUTTON_FONT = ("Segoe UI", 10, "bold")
+SMALL_FONT = ("Segoe UI", 9)
+HEADING_FONT = ("Segoe UI", 11, "bold")
+# Record zoom: ONLY the text of record lists (the rows and the heading
+# above them: ID, name, type ...) is zoomed; everything else keeps its size.
+RECORD_ZOOM_LEVELS = (100, 120, 140, 170, 200)
+LIST_AREA_WIDTH = 570       # about how wide the list part of a page is at 100%
+record_zoom = {"percent": 100}
 MUTED_TEXT_COLOR = "#5b6573"
 BORDER_COLOR = "#d9dee5"
 FREE_COLOR = "#d8efe0"
@@ -333,17 +329,17 @@ def save_theme_choice(theme_name):
     save_setting("theme", theme_name)
 
 
-def load_zoom_choice():
-    """Return the zoom % saved last time (100 if none or not a valid level)."""
-    saved_text = load_setting("zoom", "100")
-    if saved_text.isdigit() and int(saved_text) in ZOOM_LEVELS:
+def load_record_zoom():
+    """Return the record-text zoom % saved last time (100 if none or not a valid level)."""
+    saved_text = load_setting("rowzoom", "100")
+    if saved_text.isdigit() and int(saved_text) in RECORD_ZOOM_LEVELS:
         return int(saved_text)
     return 100
 
 
-def save_zoom_choice(zoom_percent):
-    """Remember the chosen zoom % for the next time the program starts."""
-    save_setting("zoom", zoom_percent)
+def save_record_zoom(zoom_percent):
+    """Remember the record-text zoom % for the next time the program starts."""
+    save_setting("rowzoom", zoom_percent)
 
 
 def scaled_font(base_font, zoom_percent):
@@ -352,40 +348,33 @@ def scaled_font(base_font, zoom_percent):
     return (base_font[0], new_size) + tuple(base_font[2:])
 
 
-def apply_zoom(zoom_percent):
-    """Rescale every shared font constant to zoom_percent (100 = normal), so
-    widgets built afterwards (list rows, grid cells, pop-ups) are the right size."""
-    global TITLE_FONT, LABEL_FONT, ENTRY_FONT, MONO_FONT, BUTTON_FONT, SMALL_FONT, HEADING_FONT
-    TITLE_FONT = scaled_font(BASE_TITLE_FONT, zoom_percent)
-    LABEL_FONT = scaled_font(BASE_LABEL_FONT, zoom_percent)
-    ENTRY_FONT = scaled_font(BASE_ENTRY_FONT, zoom_percent)
-    MONO_FONT = scaled_font(BASE_MONO_FONT, zoom_percent)
-    BUTTON_FONT = scaled_font(BASE_BUTTON_FONT, zoom_percent)
-    SMALL_FONT = scaled_font(BASE_SMALL_FONT, zoom_percent)
-    HEADING_FONT = scaled_font(BASE_HEADING_FONT, zoom_percent)
-    current_zoom["percent"] = zoom_percent
+def record_font():
+    """The font for record rows: the list font at the current record zoom."""
+    return scaled_font(MONO_FONT, record_zoom["percent"])
 
 
-def rezoom_widgets(root_window, old_percent, new_percent):
-    """Resize the text of every widget under root_window IN PLACE (nothing is
-    rebuilt, so the page, typed text and selections stay). Call apply_zoom()
-    first so widgets built afterwards match."""
+def apply_record_zoom(zoom_percent):
+    """Set the record-text zoom (100 = normal). Lists built afterwards use it."""
+    record_zoom["percent"] = zoom_percent
+
+
+def mark_record_text(widget):
+    """Mark a widget as record text (a list row, a list heading or a
+    list box) so rezoom_records resizes it. Returns the widget."""
+    widget.record_text = True
+    return widget
+
+
+def rezoom_records(root_window):
+    """Give every marked record-text widget under root_window the current
+    record font, IN PLACE (nothing is rebuilt, so the page, typed text and
+    selections stay). Everything else keeps its size."""
     waiting = [root_window]
     while len(waiting) > 0:
         widget = waiting.pop()
         waiting.extend(widget.winfo_children())
-        try:
-            parts = root_window.tk.splitlist(str(widget.cget("font")))
-        except tk.TclError:
-            # This kind of widget has no font option.
-            continue
-        # Only "family size [style...]" fonts are scaled; named fonts are left alone.
-        if len(parts) >= 2 and parts[1].lstrip("-").isdigit():
-            # Go back to the 100% size first, then scale: repeated zoom steps
-            # then never drift because of rounding.
-            base_size = round(abs(int(parts[1])) * 100 / old_percent)
-            new_size = max(6, round(base_size * new_percent / 100))
-            widget.config(font=(parts[0], new_size) + tuple(parts[2:]))
+        if getattr(widget, "record_text", False):
+            widget.config(font=record_font())
 
 
 def add_tooltip(widget, tip_text):
@@ -739,17 +728,20 @@ def build_list_panel(parent, header_text, height=14):
     Returns (panel_frame, listbox). The header is a separate label, so
     row 0 of the listbox is always real data."""
     panel_frame = tk.Frame(parent, bg=APP_BG)
-    tk.Label(panel_frame, text=header_text, font=MONO_FONT, bg=APP_BG,
-             fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x")
+    header_label = tk.Label(panel_frame, text=header_text, font=record_font(), bg=APP_BG,
+                            fg=MUTED_TEXT_COLOR, anchor="w")
+    header_label.pack(side="top", fill="x")
+    mark_record_text(header_label)
     list_holder = tk.Frame(panel_frame, bg=APP_BG)
     list_holder.pack(side="top", fill="both", expand=True)
     scrollbar = tk.Scrollbar(list_holder)
     scrollbar.pack(side="right", fill="y")
-    listbox = tk.Listbox(list_holder, font=MONO_FONT, height=height, yscrollcommand=scrollbar.set,
+    listbox = tk.Listbox(list_holder, font=record_font(), height=height, yscrollcommand=scrollbar.set,
                          activestyle="none", selectbackground=BUTTON_COLOR,
                          selectforeground=BUTTON_TEXT_COLOR, relief="solid", bd=1,
                          exportselection=False)
     listbox.pack(side="left", fill="both", expand=True)
+    mark_record_text(listbox)
     scrollbar.config(command=listbox.yview)
     return panel_frame, listbox
 
@@ -829,6 +821,15 @@ def build_action_menu(window, title_text, action_list):
         content_frame.pack(side="top", fill="both", expand=True, padx=16, pady=(0, 12))
         page_frames[action_name] = content_frame
         outer_pages[action_name] = outer_page
+
+    def open_action_page(action_name):
+        """Open one action's page directly, as if its menu button was clicked
+        (used by the Home page shortcut buttons)."""
+        if action_name in outer_pages:
+            make_open_command(action_name)()
+
+    # Kept on the tab's frame so the Home page can reach it after building the tab.
+    window.open_action_page = open_action_page
 
     show_menu()
     return page_frames, page_hooks
@@ -1055,7 +1056,7 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
                                    a message, None if the user cancelled,
                                    or raises ValueError
       delete_action(record_id)  -> deletes; returns a message or raises
-      delete_question(record_id)-> confirmation question
+      delete_question(record_id)-> confirmation question (None = don't ask)
       summary_text()            -> optional line under the list
     Returns the function to put in page_hooks (blank form, fresh list)."""
     page_state = {"editing_id": None}
@@ -1077,8 +1078,10 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
                                   "Leave it empty to show everything.")
     search_entry.pack(side="left", padx=6)
     # padx lines the headings up with the row text below (rows have a 2 px indent inside their border).
-    tk.Label(left_frame, text=list_header, font=MONO_FONT, bg=APP_BG,
-             fg=MUTED_TEXT_COLOR, anchor="w").pack(side="top", fill="x", padx=(2, 0))
+    list_header_label = tk.Label(left_frame, text=list_header, font=record_font(), bg=APP_BG,
+                                 fg=MUTED_TEXT_COLOR, anchor="w")
+    list_header_label.pack(side="top", fill="x", padx=(2, 0))
+    mark_record_text(list_header_label)
     summary_label = tk.Label(left_frame, text="", font=SMALL_FONT, bg=APP_BG, fg=MUTED_TEXT_COLOR,
                              anchor="w", justify="left", wraplength=520)
     summary_label.pack(side="bottom", fill="x", pady=(6, 0))
@@ -1132,7 +1135,9 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
 
     def remove_record(record_id):
         """Delete the record on this row (after confirming)."""
-        if not messagebox.askyesno("Delete", delete_question(record_id)):
+        question = delete_question(record_id)
+        # A question of None means "don't ask": go straight to the action.
+        if question is not None and not messagebox.askyesno("Delete", question):
             return
         try:
             message = delete_action(record_id)
@@ -1182,8 +1187,9 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
                                         tip=f"Delete {record_id} permanently. You will be asked to confirm first.")
             delete_button.config(font=SMALL_FONT, padx=8, pady=1)
             delete_button.pack(side="right", padx=4, pady=2)
-            row_label = tk.Label(row_frame, text=row_text, font=MONO_FONT, bg=base_colour,
+            row_label = tk.Label(row_frame, text=row_text, font=record_font(), bg=base_colour,
                                  fg=text_colour, anchor="w", cursor="hand2")
+            mark_record_text(row_label)
             row_label.pack(side="left", fill="x", expand=True, padx=(2, 0))
             row_frame.bind("<Button-1>", make_row_click(record_id))
             row_label.bind("<Button-1>", make_row_click(record_id))

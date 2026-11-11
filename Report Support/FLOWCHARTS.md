@@ -23,7 +23,9 @@ flowchart TD
     Y -->|Membership| Y2[build_membership_tab]
     Y -->|Coaching| Y3[build_coaching_tab]
     Y -->|Billing| Y4[build_billing_tab]
-    Y0 --> Z[Show new frame, highlight its tab]
+    Y0 --> Y0a[Home header: greeting, clock every second, 3 shortcut buttons]
+    Y0a --> Z[Show new frame, highlight its tab]
+    Y0a -. shortcut button .-> S[switch_to_tab with a page name, then open_action_page opens that page]
     Y1 --> Z
     Y2 --> Z
     Y3 --> Z

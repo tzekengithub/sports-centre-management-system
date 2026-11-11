@@ -135,8 +135,15 @@ Logic:
   `count_members_recursive` (recursion) - shown in the Members summary line.
 
 GUI (`build_membership_tab`) - menu of 3 actions, one page each:
-- **Register** - name + phone, click a membership-type card (fee, length,
-  discount), click Register.
+- **Register** - name + phone, click a membership-type picture card, click Register.
+  `load_card_picture(type)` looks in `Source Code/images/` (`common.IMAGES_FOLDER`)
+  for `card_<type>.png` then `<type>.png` (lower case, spaces/hyphens become `_`),
+  loads it with `tk.PhotoImage`, shrinks with `subsample` to about 216-240 px wide,
+  and returns None on a missing/bad file (a `tk.TclError`), so that type falls back
+  to the old text card. The caption under each picture comes from `type_caption`
+  (common.py fees/discounts + durations), never typed by hand. The chosen card is
+  marked by a coloured frame (`card_frames`); the PhotoImages are kept on
+  `cards_frame.card_pictures` so Python does not delete them.
 - **Manage Members** (`build_manage_members_page`, on
   `common.build_manage_page`) - every member with a Delete button beside
   the row; click a row to edit name/phone/type and Save Changes. No add
@@ -330,8 +337,43 @@ GUI (`build_billing_tab`) - menu of 6 actions, one page each:
 ## main.py (Teh Tze Ken - integration)
 - Checks `sys.version_info` against Python 3.10 **before** importing the
   four modules (they use `match`), and contains no `match` itself.
-- `build_home_tab(parent, switch_to_tab)` - Home tab with one button per
-  module and "How to Use This System".
+- `build_home_tab(parent, switch_to_tab)` - Home tab: the header from
+  `build_home_header`, then one button per module and "How to Use This
+  System".
+- **Home header** (one section of `main.py`). tkinter has no blur, shadow or
+  rounded corners, so the look is faked on `tk.Canvas` widgets:
+  `round_rect` draws a rounded rectangle as a smooth polygon; `draw_halo`
+  draws three slightly bigger copies in colours from `mix_colour` (the page
+  colour fading towards the glow colour), which looks like a soft glow; the
+  clock digits are drawn three times (two dim, bigger copies behind the
+  bright digits) in Dark Mode.
+  - `HEADER_PALETTE` is the one place with its own colours: a dark set and a
+    light set. The page colour still comes from `common.APP_BG`.
+  - `class PillButton` is a rounded button on its own small canvas: colour
+    changes on hover and press, a ring when it has keyboard focus (Tab),
+    Enter and Space work, and it has a hover hint. Private `__` attributes
+    with `get_text`.
+  - `class HomeHeader` builds the greeting row (dot, greeting, ADMIN badge),
+    the welcome line, the three `PillButton`s (a `for` loop over `SHORTCUTS`,
+    a list of tuples) and the clock card. `relayout` puts the card beside
+    the text, or below it on a narrow window. `apply_theme` redraws
+    everything in the other theme's colours (called by the Dark/Light
+    button through `home_header_state`).
+  - Small pure functions: `greeting_text(hour)` (if/elif/else), `clock_text`,
+    `clock_parts`, `date_text`, `timezone_text` (UTC offset as `GMT+8`).
+  - `start_clock(home_frame, header)` calls `header.show_time` now and every
+    second with `after(1000, ...)`. `show_time` only changes the text of
+    existing canvas items (`itemconfig`), so nothing is redrawn and the digits
+    do not flicker; the left side is redrawn only when the greeting changes.
+    A `<Destroy>` binding cancels the timer when the page is left, and
+    `try / except tk.TclError` covers a window that has already closed. The
+    time zone comes from `datetime` (the project's allowed import list has
+    `datetime`, not `time`).
+- **Shortcut buttons:** each calls `switch_to_tab(tab, page)`, which rebuilds
+  the tab as usual and then calls the `open_action_page(page)` function that
+  `common.build_action_menu` stores on the tab's frame. That function is the
+  same code a menu button runs (`make_open_command`), so the page also runs its
+  refresh hook.
 - `main()` - one window: tab bar (Home, Booking, Membership, Coaching,
   Billing, Exit) above a content area. `switch_to_tab` destroys the
   current tab and calls the module's `build_X_tab(content_frame)` with

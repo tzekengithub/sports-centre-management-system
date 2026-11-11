@@ -1,6 +1,6 @@
 """
 Module      : booking.py
-Member 1    : Teh Tze Ken (student ID: ________)
+Member 1    : Teh Tze Ken (student ID: 26PMD03846)
 Purpose     : Facility & Court Booking module - a visual grid of court
               availability per hour for each sport, booking by clicking
               free slots, rescheduling, cancelling, viewing every booking
@@ -328,6 +328,44 @@ def create_booking(member_id, sport, court_no, date_text, start_hour, duration_h
     return new_booking
 
 
+def group_into_blocks(picked_cells):
+    """Turn a set of (court_no, hour) cells into (court_no, start_hour,
+    length) blocks: consecutive hours on one court become one block."""
+    sorted_cells = sorted(picked_cells)
+    blocks = []
+    for court_no, hour in sorted_cells:
+        if len(blocks) > 0 and blocks[-1][0] == court_no and blocks[-1][1] + blocks[-1][2] == hour:
+            blocks[-1][2] = blocks[-1][2] + 1
+        else:
+            blocks.append([court_no, hour, 1])
+    return blocks
+
+
+def create_bookings(member_id, sport, date_text, picked_cells):
+    """Book every picked (court_no, hour) cell for one member in one go.
+    Consecutive hours on a court become one booking. Every block is
+    checked before anything is saved, so it is all or nothing (barring a
+    disk error). Returns the new Booking objects; raises ValueError."""
+    if len(picked_cells) == 0:
+        raise ValueError("Pick at least one free hour in the grid.")
+    blocks = group_into_blocks(picked_cells)
+    booking_list = load_all_bookings()
+    for court_no, start_hour, length in blocks:
+        date_text = check_booking_time(date_text, start_hour)
+        check_member_can_book(member_id, date_text)
+        if has_clash(booking_list, sport, court_no, date_text, start_hour, length):
+            raise ValueError(f"Court {court_no} is already booked at {start_hour:02d}:00.")
+        # Build a throwaway Booking so the setters range-check court and hours.
+        Booking("TEMP", member_id, sport, court_no, date_text, start_hour, length, "CONFIRMED")
+    new_bookings = []
+    for court_no, start_hour, length in blocks:
+        new_id = common.generate_id(common.BOOKINGS_FILE, "BKG")
+        new_booking = Booking(new_id, member_id, sport, court_no, date_text, start_hour, length, "CONFIRMED")
+        common.append_line(common.BOOKINGS_FILE, new_booking.to_line())
+        new_bookings.append(new_booking)
+    return new_bookings
+
+
 def check_booking_time(date_text, start_hour):
     """Check a booking date and start hour are real and not in the past.
     Returns the date in standard YYYY-MM-DD form; raises ValueError."""
@@ -412,6 +450,59 @@ def cancel_booking(booking_id):
     for booking in booking_list:
         updated_lines.append(booking.to_line())
     common.rewrite_records(common.BOOKINGS_FILE, updated_lines, line_to_booking)
+
+
+def cancel_booking_hours(booking_id, first_hour, end_hour):
+    """Cancel only the hours first_hour..end_hour-1 of a booking. The picked
+    hours stay on record under the original ID as CANCELLED, and any hours
+    before or after them become new CONFIRMED bookings (same member, sport,
+    court and date), so nothing is lost. The whole range is the same as
+    cancel_booking. Returns the list of new bookings; raises ValueError."""
+    booking_list = load_all_bookings()
+    booking = find_booking_by_id(booking_list, booking_id)
+    if booking is None:
+        raise ValueError(f"No booking found with ID {booking_id}.")
+    start_hour = booking.get_start_hour()
+    booking_end = start_hour + booking.get_duration_hrs()
+    if not (start_hour <= first_hour < end_hour <= booking_end):
+        raise ValueError(f"Pick hours from {start_hour:02d}:00 to {booking_end:02d}:00.")
+    if first_hour == start_hour and end_hour == booking_end:
+        cancel_booking(booking_id)
+        return []
+    # The same safety rules as cancel_booking.
+    if booking.get_status() == "CANCELLED":
+        raise ValueError("This booking is already cancelled.")
+    if booking_has_started(booking):
+        raise ValueError("This booking has already started or passed, so it stays as it is.")
+    bill_info = booking_bill_info(booking_id)
+    if bill_info is not None:
+        raise ValueError(bill_blocks_text(bill_info))
+
+    # Work out the pieces that stay booked: before and after the cancelled hours.
+    kept_pieces = []
+    if first_hour > start_hour:
+        kept_pieces.append((start_hour, first_hour - start_hour))
+    if end_hour < booking_end:
+        kept_pieces.append((end_hour, booking_end - end_hour))
+    new_bookings = []
+    for piece_start, piece_length in kept_pieces:
+        new_id = common.generate_id(common.BOOKINGS_FILE, "BKG")
+        common.note_used_id(new_id)  # so the next piece gets a different ID
+        new_bookings.append(Booking(new_id, booking.get_member_id(), booking.get_sport(), booking.get_court_no(),
+                                    booking.get_date_text(), piece_start, piece_length, "CONFIRMED"))
+    # The original record now describes just the cancelled hours.
+    booking.set_start_hour(first_hour)
+    booking.set_duration_hrs(end_hour - first_hour)
+    booking.set_status("CANCELLED")
+
+    # One write for everything, so the file is never left half changed.
+    updated_lines = []
+    for each_booking in booking_list:
+        updated_lines.append(each_booking.to_line())
+    for new_booking in new_bookings:
+        updated_lines.append(new_booking.to_line())
+    common.rewrite_records(common.BOOKINGS_FILE, updated_lines, line_to_booking)
+    return new_bookings
 
 
 def reschedule_booking(booking_id, new_date_text, new_start_hour, new_court_no):
@@ -547,8 +638,9 @@ def find_booking_at(booking_list, sport, court_no, date_text, hour):
 # ---------------------------------------------------------------------------
 BOOKING_ACTIONS = [
     ("Book a Court", "See free courts and book one",
-     "Pick a date and a sport. Click a free (green) hour - click the next hour on the same "
-     "court to book longer. Choose the member, then click Book."),
+     "Pick a date and a sport. Click the free (green) hours you want, on any courts - "
+     "neighbouring hours on one court become one booking. Click a red hour to cancel just that "
+     "hour. Choose the member, then click Book."),
     ("Reschedule Booking", "Move a booking to another time or court",
      "Click an upcoming booking, choose the new date, start time and court, then click "
      "Reschedule. The length and price stay the same."),
@@ -657,23 +749,85 @@ def build_cancel_page(page_frame):
         """Upcoming confirmed bookings only (past ones are history)."""
         return booking_rows(search_text, True)
 
+    form_widgets = {}
+
+    def build_form(form_frame):
+        """Add 'Cancel from' and 'Cancel until' hour drop-downs, so part of a
+        longer booking can be cancelled."""
+        form_widgets["from"] = tk.StringVar(value="")
+        form_widgets["from_menu"] = common.make_option_menu(
+            form_frame, form_widgets["from"], [], width=8,
+            tip="The first hour to cancel. Leave both boxes as they are to cancel the whole booking.")
+        common.add_form_row(form_frame, 0, "Cancel from", form_widgets["from_menu"],
+                            tip="The first hour to cancel (HH:00).")
+        form_widgets["until"] = tk.StringVar(value="")
+        form_widgets["until_menu"] = common.make_option_menu(
+            form_frame, form_widgets["until"], [], width=8,
+            tip="The time the cancelled part ends. Hours outside the range stay booked.")
+        common.add_form_row(form_frame, 1, "Cancel until", form_widgets["until_menu"],
+                            tip="The time the cancelled part ends (HH:00).")
+
+    def fill_form(booking_id):
+        """Start with the whole booking chosen."""
+        booking = find_booking_by_id(load_all_bookings(), booking_id)
+        if booking is None:
+            return
+        start_hour = booking.get_start_hour()
+        end_hour = start_hour + booking.get_duration_hrs()
+        from_choices = []
+        for hour in range(start_hour, end_hour):
+            from_choices.append(hour_choice_text(hour))
+        until_choices = []
+        for hour in range(start_hour + 1, end_hour + 1):
+            until_choices.append(hour_choice_text(hour))
+        form_widgets["from"].set(hour_choice_text(start_hour))
+        common.set_option_menu_choices(form_widgets["from_menu"], form_widgets["from"], from_choices)
+        form_widgets["until"].set(hour_choice_text(end_hour))
+        common.set_option_menu_choices(form_widgets["until_menu"], form_widgets["until"], until_choices)
+
+    def chosen_hours():
+        """Return (first_hour, end_hour) picked in the form."""
+        from_text = form_widgets["from"].get()
+        until_text = form_widgets["until"].get()
+        if from_text == "" or until_text == "":
+            raise ValueError("Pick the hours to cancel.")
+        first_hour = int(from_text[0:2])
+        end_hour = int(until_text[0:2])
+        if end_hour <= first_hour:
+            raise ValueError("'Cancel until' must be later than 'Cancel from'.")
+        return first_hour, end_hour
+
     def cancel_action(booking_id):
-        """Cancel the picked booking."""
-        cancel_booking(booking_id)
-        return f"Booking {booking_id} cancelled. It stays on record as CANCELLED (see View All Bookings)."
+        """Cancel the picked hours of the picked booking."""
+        first_hour, end_hour = chosen_hours()
+        new_bookings = cancel_booking_hours(booking_id, first_hour, end_hour)
+        if len(new_bookings) == 0:
+            return f"Booking {booking_id} cancelled. It stays on record as CANCELLED (see View All Bookings)."
+        kept_text = ""
+        for new_booking in new_bookings:
+            kept_text += f"\n{new_booking.get_booking_id()}: {booking_time_text(new_booking)} stays booked"
+        return (f"{first_hour:02d}:00-{end_hour:02d}:00 of booking {booking_id} cancelled (kept on record "
+                f"as CANCELLED).{kept_text}")
 
     def cancel_question(booking_id):
-        """Confirmation question for cancelling, naming the booking."""
+        """Confirmation question for cancelling, naming the booking and hours."""
         booking = find_booking_by_id(load_all_bookings(), booking_id)
         if booking is None:
             return f"Cancel booking {booking_id}?"
-        return (f"Cancel booking {booking_id} ({booking.get_sport()} Court {booking.get_court_no()}, "
-                f"{booking.get_date_text()} {booking_time_text(booking)})? This frees the court for others.")
+        try:
+            first_hour, end_hour = chosen_hours()
+        except ValueError:
+            return f"Cancel booking {booking_id}?"
+        return (f"Cancel {first_hour:02d}:00-{end_hour:02d}:00 of booking {booking_id} "
+                f"({booking.get_sport()} Court {booking.get_court_no()}, {booking.get_date_text()} "
+                f"{booking_time_text(booking)})? This frees the court for others.")
 
     return common.build_pick_page(page_frame, UPCOMING_LIST_HEADER, load_rows, "Cancel Booking",
-                                  cancel_action, describe=describe_booking, confirm_text=cancel_question,
+                                  cancel_action, describe=describe_booking, build_form=build_form,
+                                  fill_form=fill_form, confirm_text=cancel_question,
                                   danger=True, search_label=SEARCH_LABEL, empty_text="No upcoming bookings.",
-                                  action_tip="Cancel the booking you clicked. It stays on record as CANCELLED.")
+                                  action_tip="Cancel the hours chosen above (the whole booking unless you "
+                                             "change them). Cancelled hours stay on record as CANCELLED.")
 
 
 def build_view_all_page(page_frame):
@@ -794,10 +948,12 @@ def upcoming_rows(search_text):
 def build_book_page(section_frame, page_hooks):
     """Build the Book a Court page: date + sport pickers, the
     courts-by-hours grid, and the member picker with a Book button."""
-    grid_state = {"sport": list(common.SPORTS.keys())[0], "court": None, "hours": [], "date": "",
+    # "picked" is a set of (court_no, hour) cells the user has selected.
+    grid_state = {"sport": list(common.SPORTS.keys())[0], "picked": set(), "date": "",
                   "members_date": ""}
     sport_buttons = {}
     member_choice_ids = {}
+    free_cells = {}  # (court_no, hour) -> grid button, for in-place recolouring
 
     # --- top row: date and sport ---
     controls_row = tk.Frame(section_frame, bg=common.APP_BG)
@@ -837,6 +993,7 @@ def build_book_page(section_frame, page_hooks):
         court, one column per opening hour."""
         for child_widget in grid_frame.winfo_children():
             child_widget.destroy()
+        free_cells.clear()
         sport = grid_state["sport"]
         date_text = date_entry.get().strip()
         shown_date["text"] = date_text
@@ -903,7 +1060,7 @@ def build_book_page(section_frame, page_hooks):
             common.add_tooltip(court_label, f"{sport} court number {court_no}. Each square to the right is one hour.")
             for row_index in range(len(hour_list)):
                 hour = hour_list[row_index]
-                is_selected = (grid_state["court"] == court_no and hour in grid_state["hours"])
+                is_selected = (court_no, hour) in grid_state["picked"]
                 cell_fg = common.TEXT_COLOR
                 if hour in past_hours:
                     cell_bg, cell_text, cell_state = common.PAST_COLOR, "", "disabled"
@@ -922,7 +1079,10 @@ def build_book_page(section_frame, page_hooks):
                                  command=make_cell_command(booking_list, court_no, hour,
                                                            grid[row_index][court_index]))
                 cell.grid(row=court_no, column=row_index + 1, padx=1, pady=2)
-                common.add_tooltip(cell, cell_tip_text(court_no, hour, cell_bg, sport))
+                if cell_state == "normal" and cell_text != "✕":
+                    # Free or selected cell: remember it so a click can recolour it in place.
+                    free_cells[(court_no, hour)] = cell
+                common.add_tooltip(cell, make_tip_function(cell, court_no, hour, sport))
 
         legend_row = tk.Frame(grid_frame, bg=common.APP_BG)
         legend_row.grid(row=court_count + 1, column=0, columnspan=len(hour_list) + 1, sticky="w", pady=(8, 0))
@@ -933,17 +1093,38 @@ def build_book_page(section_frame, page_hooks):
                 side="left", padx=(4, 14))
         update_selection_label()
 
+    def make_tip_function(cell, court_no, hour, sport):
+        """Return a function giving the cell's hint from its colour at the moment it opens."""
+        def tip_function():
+            """Build the hint text for this cell."""
+            return cell_tip_text(court_no, hour, cell.cget("bg"), sport)
+        return tip_function
+
+    def restyle_selection():
+        """Recolour only the free/selected cells after a click, instead of
+        rebuilding the whole grid (fast: no file read, no new widgets)."""
+        for cell_key in free_cells:
+            cell = free_cells[cell_key]
+            if cell_key in grid_state["picked"]:
+                cell.config(bg=common.SELECTED_COLOR, activebackground=common.SELECTED_COLOR,
+                            fg=common.SELECTED_TEXT_COLOR, activeforeground=common.SELECTED_TEXT_COLOR,
+                            text="✓")
+            else:
+                cell.config(bg=common.FREE_COLOR, activebackground=common.FREE_COLOR,
+                            fg=common.TEXT_COLOR, activeforeground=common.TEXT_COLOR, text="")
+        update_selection_label()
+
     def cell_tip_text(court_no, hour, cell_bg, sport):
         """Return the hover hint for one grid cell, based on its colour."""
         slot_text = f"Court {court_no}, {hour:02d}:00-{hour + 1:02d}:00"
         if cell_bg == common.PAST_COLOR:
             return f"{slot_text}: this time has already passed."
         elif cell_bg == common.BOOKED_COLOR:
-            return f"{slot_text}: already booked. Click to see which booking."
+            return f"{slot_text}: already booked. Click to see which booking, or to cancel just this hour."
         elif cell_bg == common.SELECTED_COLOR:
-            return f"{slot_text}: selected. Click it again to clear your selection."
-        return (f"{slot_text}: free, RM {common.SPORTS[sport]['rate']:.2f} for this hour. Click to select it; "
-                "then click the hour next to it on the same court to book longer.")
+            return f"{slot_text}: selected. Click it again to unselect it."
+        return (f"{slot_text}: free, RM {common.SPORTS[sport]['rate']:.2f} for this hour. Click to select it. "
+                "You can select hours on any courts; neighbouring hours on one court become one booking.")
 
     def make_cell_command(booking_list, court_no, hour, cell_value):
         """Return the command for one grid cell."""
@@ -953,40 +1134,57 @@ def build_book_page(section_frame, page_hooks):
                 covering = find_booking_at(booking_list, grid_state["sport"], court_no,
                                            grid_state["date"], hour)
                 if covering is not None:
-                    messagebox.showinfo("Booked", (f"Court {court_no} at {hour:02d}:00 is booked\n"
-                                                   f"({covering.get_booking_id()}, {booking_time_text(covering)})."))
+                    question = (f"Court {court_no} at {hour:02d}:00 is booked\n"
+                                f"({covering.get_booking_id()}, {booking_time_text(covering)}, "
+                                f"member {covering.get_member_id()}).\n\n"
+                                f"Cancel just {hour:02d}:00-{hour + 1:02d}:00? "
+                                "The rest of the booking stays.")
+                    if messagebox.askyesno("Booked", question):
+                        try:
+                            cancel_booking_hours(covering.get_booking_id(), hour, hour + 1)
+                        except (ValueError, OSError) as error:
+                            show_problem(error)
+                            return
+                        messagebox.showinfo("Cancelled", f"Court {court_no} {hour:02d}:00-{hour + 1:02d}:00 "
+                                                         "is free again. It stays on record as CANCELLED.")
+                        clear_selection_and_redraw()
                 return
             on_free_cell_clicked(court_no, hour)
         return cell_command
 
     def on_free_cell_clicked(court_no, hour):
-        """Grow, start or clear the selection. A booking must be one
-        unbroken block on one court, so a click next to the current
-        selection extends it and any other click starts a new one."""
-        selected_hours = grid_state["hours"]
-        if grid_state["court"] == court_no and hour in selected_hours:
-            grid_state["court"] = None
-            grid_state["hours"] = []
-        elif (grid_state["court"] == court_no and len(selected_hours) > 0
-              and (hour == min(selected_hours) - 1 or hour == max(selected_hours) + 1)):
-            selected_hours.append(hour)
+        """Toggle one cell in the selection. Any free hours on any courts
+        can be picked; neighbouring hours on one court are saved as one
+        booking when Book is pressed."""
+        cell_key = (court_no, hour)
+        if cell_key in grid_state["picked"]:
+            grid_state["picked"].remove(cell_key)
         else:
-            grid_state["court"] = court_no
-            grid_state["hours"] = [hour]
-        draw_grid()
+            grid_state["picked"].add(cell_key)
+        restyle_selection()
+
+    def selection_text_for(blocks):
+        """Describe the blocks, e.g. 'Court 1 10:00-11:00, Court 1 16:00-18:00'."""
+        parts = []
+        for court_no, start_hour, length in blocks:
+            parts.append(f"Court {court_no} {start_hour:02d}:00-{start_hour + length:02d}:00")
+        return fit_selection(", ".join(parts))
+
+    def fit_selection(text):
+        """Cut a long selection text so the bar does not overflow the window."""
+        return common.fit_text(text, 90)
 
     def update_selection_label():
         """Describe the current selection and its price next to Book."""
-        selected_hours = grid_state["hours"]
-        if len(selected_hours) == 0:
-            selection_label.config(text="Click free hours in the grid to choose a time.")
+        picked_cells = grid_state["picked"]
+        if len(picked_cells) == 0:
+            selection_label.config(text="Click free hours in the grid to choose times (any hours, any courts).")
             book_button.config(state="disabled")
             return
-        start_hour = min(selected_hours)
-        end_hour = max(selected_hours) + 1
-        price = common.SPORTS[grid_state["sport"]]["rate"] * len(selected_hours)
-        selection_text = (f"Court {grid_state['court']}, {start_hour:02d}:00-{end_hour:02d}:00 "
-                          f"({len(selected_hours)} hour(s))  =  RM {price:.2f}")
+        blocks = group_into_blocks(picked_cells)
+        price = common.SPORTS[grid_state["sport"]]["rate"] * len(picked_cells)
+        selection_text = (f"{len(blocks)} booking(s): {selection_text_for(blocks)} "
+                          f"({len(picked_cells)} hour(s))  =  RM {price:.2f}")
         if member_variable.get() in member_choice_ids:
             selection_label.config(text=selection_text)
             book_button.config(state="normal")
@@ -996,8 +1194,7 @@ def build_book_page(section_frame, page_hooks):
 
     def clear_selection_and_redraw():
         """Forget the selection (the date or sport changed) and redraw."""
-        grid_state["court"] = None
-        grid_state["hours"] = []
+        grid_state["picked"].clear()
         draw_grid()
 
     def on_pick_date():
@@ -1077,18 +1274,21 @@ def build_book_page(section_frame, page_hooks):
             messagebox.showerror("Please check", ("The date box was changed, so the grid now shows "
                                                   f"{date_entry.get().strip()}. Pick the hours again."))
             return
-        selected_hours = grid_state["hours"]
         try:
-            new_booking = create_booking(member_choice_ids[member_variable.get()], grid_state["sport"],
-                                         grid_state["court"], grid_state["date"],
-                                         min(selected_hours), len(selected_hours))
+            new_bookings = create_bookings(member_choice_ids[member_variable.get()], grid_state["sport"],
+                                           grid_state["date"], grid_state["picked"])
         except (ValueError, OSError) as error:
             show_problem(error)
             return
-        messagebox.showinfo("Booked", (f"Booking {new_booking.get_booking_id()} confirmed.\n"
-                                       f"{new_booking.get_sport()} Court {new_booking.get_court_no()}, "
-                                       f"{new_booking.get_date_text()} {booking_time_text(new_booking)}\n"
-                                       f"Price: RM {new_booking.get_price():.2f}"))
+        summary_lines = []
+        total_price = 0
+        for new_booking in new_bookings:
+            summary_lines.append(f"{new_booking.get_booking_id()}: Court {new_booking.get_court_no()}, "
+                                 f"{booking_time_text(new_booking)}  (RM {new_booking.get_price():.2f})")
+            total_price = total_price + new_booking.get_price()
+        messagebox.showinfo("Booked", (f"{len(new_bookings)} booking(s) confirmed for "
+                                       f"{new_bookings[0].get_sport()} on {new_bookings[0].get_date_text()}:\n\n"
+                                       + "\n".join(summary_lines) + f"\n\nTotal: RM {total_price:.2f}"))
         clear_selection_and_redraw()
 
     book_button = common.make_button(book_bar, "Book", on_book,

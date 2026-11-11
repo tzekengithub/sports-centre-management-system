@@ -1,6 +1,6 @@
 """
 Module      : coaching.py
-Member 3    : Tan Chor Koon (student ID: ________)
+Member 3    : Tan Chor Koon (student ID: 26PMD03614)
 Purpose     : Coaching & Class Management module - assigns coaches to
               private sessions or group classes, enrols members, and
               tracks each coach's working hours and commission.
@@ -575,10 +575,14 @@ def update_class(class_id, new_date_text, new_start_hour, new_duration_hrs, new_
 
     # A bill was worked out from this class's fee and length: changing
     # either would leave the bill showing the wrong amount.
-    bill_id = class_bill_id(class_id)
-    if bill_id is not None and (new_fee_per_pax != target_class.get_fee_per_pax()
-                                or new_duration_hrs != target_class.get_duration_hrs()):
-        raise ValueError(f"Bill {bill_id} was made for this class, so its fee and duration can't be changed. "
+    bill_info = class_bill_info(class_id)
+    if bill_info is not None and (new_fee_per_pax != target_class.get_fee_per_pax()
+                                  or new_duration_hrs != target_class.get_duration_hrs()):
+        if bill_info[1] == "PAID":
+            # A PAID bill can never be voided, so "void it first" would be wrong advice.
+            raise ValueError(f"Bill {bill_info[0]} for this class is already paid and a paid bill can't be "
+                             "voided, so the fee and duration can't be changed.")
+        raise ValueError(f"Bill {bill_info[0]} was made for this class, so its fee and duration can't be changed. "
                          "Void the bill first (Billing > Void Bill), or leave them as they are.")
 
     if new_max_pax < len(target_class.get_participant_list()):
@@ -755,24 +759,22 @@ def search_classes(class_list, search_field, search_text):
 
 def class_bill_info(class_id, member_id=None):
     """Return (bill_id, status) of a bill (not VOID) made for class_id, or
-    None. With member_id, only that member's bill counts. Read straight
-    from bills.txt (coaching does not import billing.py). Field 1 is the
-    member, 3 the class and 8 the status."""
+    None. With member_id, only that member's bill counts. If the class has
+    several bills, a PAID one is reported first (it can never be voided, so
+    it decides what advice the error message gives). Read straight from
+    bills.txt (coaching does not import billing.py). Field 1 is the member,
+    3 the class and 8 the status."""
+    found_bill = None
     for line in common.read_lines(common.BILLS_FILE):
         fields = common.split_fields(line, BILL_FIELD_COUNT)
         if fields is None or fields[3] != class_id or fields[8] == "VOID":
             continue
         if member_id is None or fields[1] == member_id:
-            return fields[0], fields[8]
-    return None
-
-
-def class_bill_id(class_id):
-    """Return the ID of a bill (not VOID) made for class_id, or None."""
-    bill_info = class_bill_info(class_id)
-    if bill_info is None:
-        return None
-    return bill_info[0]
+            if fields[8] == "PAID":
+                return fields[0], fields[8]
+            if found_bill is None:
+                found_bill = (fields[0], fields[8])
+    return found_bill
 
 
 def cancel_class(class_id):
@@ -942,7 +944,8 @@ def build_coaching_tab(parent):
         page_frames["Remove Member"], f"{'Class ID':<9}{'Date':<11}{'Sport':<10}{'Member ID':<10}{'Name':<20}",
         enrolment_rows, "Remove", remove_member_action, describe=describe_enrolment,
         confirm_text=remove_member_question, danger=True, search_label="Member name",
-        empty_text="Nobody is enrolled in a class that hasn't started.")
+        empty_text="Nobody is enrolled in a class that hasn't started.",
+        refresh_on_error=True)
     build_report_page(page_frames["Hours & Commission"], page_hooks)
     return window
 
@@ -970,7 +973,8 @@ def coach_rows(search_text):
 def class_rows(only_upcoming, only_with_space):
     """Return (class_id, row_text[, "past"]) for classes, soonest first.
     only_upcoming keeps only classes that haven't started; otherwise
-    classes that are over are marked "past" (shown greyed out).
+    classes that have started (under way or over) are marked "past"
+    (shown greyed out), because they can't be edited or deleted.
     only_with_space keeps only classes that still have room."""
     sort_rows = []
     for sports_class in load_all_classes():
@@ -986,7 +990,7 @@ def class_rows(only_upcoming, only_with_space):
         pax_text = f"{len(sports_class.get_participant_list())}/{sports_class.get_max_pax()}"
         row_text = (f"{class_id:<9}{date_text:<11}{sports_class.get_time_text():<12}"
                     f"{sports_class.get_sport():<10}{sports_class.get_class_type():<8}{pax_text:>7}")
-        if class_is_over(sports_class):
+        if class_has_started(sports_class):
             rows.append((class_id, row_text, "past"))
         else:
             rows.append((class_id, row_text))
@@ -1442,10 +1446,14 @@ def build_manage_classes_page(page_frame, page_hooks):
         return f"Class {class_id} deleted."
 
     def delete_question(class_id):
-        """Confirmation question naming the class and any enrolled members."""
+        """Confirmation question naming the class and any enrolled members,
+        or None for a class that has started (no question: Delete just
+        explains that it is kept as a record)."""
         sports_class = find_class_by_id(load_all_classes(), class_id)
         if sports_class is None:
             return f"Delete class {class_id}?"
+        if class_has_started(sports_class):
+            return None
         question = (f"Delete class {class_id} ({sports_class.get_sport()} {sports_class.get_class_type()}, "
                     f"{sports_class.get_date_text()} {sports_class.get_time_text()})?")
         participant_list = sports_class.get_participant_list()

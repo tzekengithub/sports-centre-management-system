@@ -7,6 +7,9 @@ python main.py
 ```
 Needs Python 3.10+. No installs needed.
 
+## Home page
+The Home page greets you by the time of day, shows a live clock (time, date and time zone) and has three shortcut buttons: **Book a Court**, **Register Member** and **Create Bill** (each opens that page directly; Tab and Enter work too). The look changes with Dark / Light Mode.
+
 ## How it works
 1. Click a tab: **Booking**, **Membership**, **Coaching** or **Billing**.
 2. It asks **"What would you like to do?"** — click an action.
@@ -41,7 +44,7 @@ always ask first.
 ## Try it in a minute
 - **Booking > Book a Court:** pick a date and sport, click a green hour
   (and the next one for 2 hours), pick a member, **Book**.
-- **Membership > Register:** name, phone, click a card, **Register**.
+- **Membership > Register:** name, phone, click a picture card, **Register**.
 - **Coaching > Enrol Member:** click a class, pick a member, **Enrol**.
   (For a **Private** class, pick the member right on Manage Classes.)
 - **Billing > Create Bill**, then **Pay Bill**.

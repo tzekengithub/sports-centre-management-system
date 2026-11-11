@@ -1,6 +1,6 @@
 """
 Module      : membership.py
-Member 2    : Teoh Zynn (student ID: ________)
+Member 2    : Teoh Zynn (student ID: 26PMD03025)
 Purpose     : Membership Registration module - lets the public register
               for a membership type (Annual, Monthly, Pay-As-You-Go, VIP,
               Youth, Senior, Family), and view, edit, renew or remove
@@ -9,6 +9,7 @@ Date        : 2026-11-07
 """
 
 import datetime
+import os
 import tkinter as tk
 from tkinter import messagebox
 
@@ -70,6 +71,10 @@ class Member(common.Person):
 # ---------------------------------------------------------------------------
 # LOGIC LAYER (plain functions, no tkinter - callable and testable on their own)
 # ---------------------------------------------------------------------------
+# Membership card pictures: aim for this width, never show wider than the maximum (pixels).
+CARD_PICTURE_WIDTH = 240
+CARD_PICTURE_MAX_WIDTH = 260
+
 MEMBERSHIP_DURATION_DAYS = {
     "Annual": 365, "Monthly": 30, "Pay-As-You-Go": 365,
     "VIP": 365, "Youth": 180, "Senior": 365, "Family": 365,
@@ -525,6 +530,28 @@ def build_manage_members_page(page_frame, page_hooks):
         summary_text=members_summary, empty_text="No members found.")
 
 
+def load_card_picture(membership_type):
+    """Return the PhotoImage for a membership type, or None if there is no usable picture."""
+    name = membership_type.lower().replace(" ", "_").replace("-", "_")
+    for file_name in ("card_" + name + ".png", name + ".png"):
+        path = os.path.join(common.IMAGES_FOLDER, file_name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            picture = tk.PhotoImage(file=path)
+            # Tk can only shrink by whole numbers: aim for about 240 pixels wide.
+            shrink = -(-picture.width() // CARD_PICTURE_WIDTH)
+            if shrink > 1:
+                picture = picture.subsample(shrink)
+            if picture.width() > CARD_PICTURE_MAX_WIDTH:
+                return None
+            return picture
+        except (tk.TclError, OSError):
+            # Not a real PNG (e.g. a renamed JPEG) or unreadable: use the text card instead.
+            continue
+    return None
+
+
 def build_register_page(section_frame, page_hooks):
     """Build the Register page: name/phone, one card per membership
     type, and a Register button."""
@@ -551,28 +578,42 @@ def build_register_page(section_frame, page_hooks):
     summary_label = tk.Label(bottom_row, text="", font=common.LABEL_FONT, bg=common.APP_BG, anchor="w")
     summary_label.pack(side="left")
 
+    # Keeps every PhotoImage alive as long as this page exists (tkinter forgets unreferenced ones).
+    card_pictures = {}
+    cards_frame.card_pictures = card_pictures   # the frame now owns them, so they live as long as the page
+    card_frames = {}   # the coloured frame around each picture card
+
     def type_card_text(membership_type):
-        """Return the text shown on one membership-type card."""
+        """Return the text shown on one membership-type card (used when there is no picture)."""
+        return f"{membership_type}\n{type_caption(membership_type)}"
+
+    def type_caption(membership_type):
+        """Return the one-line caption built from the real fee, duration and discount."""
         fee = common.MEMBERSHIP_FEES[membership_type]
         days = MEMBERSHIP_DURATION_DAYS[membership_type]
         discount = common.MEMBER_DISCOUNT_PCT[membership_type]
         if fee == 0:
             fee_text = "No fee"
         else:
-            fee_text = f"RM {fee:.0f}"
+            fee_text = f"RM {fee:.2f}"
         if discount == 0:
             discount_text = "no discount"
         else:
             discount_text = f"{discount:g}% off"
-        return f"{membership_type}\n{fee_text} - {duration_text(days)}\n{discount_text}"
+        return f"{fee_text} - {duration_text(days)} - {discount_text}"
 
     def highlight_type():
         """Show which card is chosen and describe it next to Register."""
         for membership_type in type_buttons:
             if membership_type == register_state["type"]:
                 type_buttons[membership_type].config(bg=common.BUTTON_COLOR, fg=common.BUTTON_TEXT_COLOR)
+                # A picture card is marked by a thick coloured frame around it.
+                if membership_type in card_frames:
+                    card_frames[membership_type].config(bg=common.BUTTON_COLOR)
             else:
                 type_buttons[membership_type].config(bg=common.PANEL_BG, fg=common.ACCENT_COLOR)
+                if membership_type in card_frames:
+                    card_frames[membership_type].config(bg=common.APP_BG)
         chosen_type = register_state["type"]
         if chosen_type is None:
             summary_label.config(text="Click a card to choose a type.")
@@ -593,11 +634,25 @@ def build_register_page(section_frame, page_hooks):
 
     for type_index in range(len(common.MEMBERSHIP_TYPES)):
         membership_type = common.MEMBERSHIP_TYPES[type_index]
-        type_button = tk.Button(cards_frame, text=type_card_text(membership_type), width=17, height=4,
-                                font=common.BUTTON_FONT, bg=common.PANEL_BG, fg=common.ACCENT_COLOR,
-                                relief="solid", bd=1, cursor="hand2",
-                                command=make_type_command(membership_type))
-        type_button.grid(row=type_index // 4, column=type_index % 4, padx=4, pady=4)
+        picture = load_card_picture(membership_type)
+        if picture is None:
+            type_button = tk.Button(cards_frame, text=type_card_text(membership_type), width=17, height=4,
+                                    font=common.BUTTON_FONT, bg=common.PANEL_BG, fg=common.ACCENT_COLOR,
+                                    relief="solid", bd=1, cursor="hand2",
+                                    command=make_type_command(membership_type))
+        else:
+            card_pictures[membership_type] = picture
+            card_frame = tk.Frame(cards_frame, bg=common.APP_BG, padx=5, pady=5)
+            card_frames[membership_type] = card_frame
+            type_button = tk.Button(card_frame, image=picture, text=type_caption(membership_type),
+                                    compound="top", font=common.SMALL_FONT, bg=common.PANEL_BG,
+                                    fg=common.ACCENT_COLOR, relief="flat", bd=0, cursor="hand2",
+                                    command=make_type_command(membership_type))
+            type_button.pack()
+        if membership_type in card_frames:
+            card_frames[membership_type].grid(row=type_index // 4, column=type_index % 4, padx=1, pady=1)
+        else:
+            type_button.grid(row=type_index // 4, column=type_index % 4, padx=3, pady=3)
         common.add_tooltip(type_button, (
             f"Choose {membership_type}: RM {common.MEMBERSHIP_FEES[membership_type]:.2f} fee, lasts "
             f"{duration_text(MEMBERSHIP_DURATION_DAYS[membership_type])}, "
