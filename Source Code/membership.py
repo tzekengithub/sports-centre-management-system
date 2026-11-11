@@ -307,8 +307,12 @@ def count_members_by_type(member_list):
     return type_counts
 
 
-def members_expiring_within(member_list, days):
-    """Return members whose expiry date is within 'days' days from today."""
+EXPIRY_WARNING_DAYS = 30
+
+
+def members_expiring_within(member_list, days=EXPIRY_WARNING_DAYS):
+    """Return members whose expiry date is within 'days' days from today
+    (30 if the caller doesn't say: a default parameter value)."""
     today = common.parse_date(common.today_string())
     expiring_list = []
     for member in member_list:
@@ -317,6 +321,30 @@ def members_expiring_within(member_list, days):
         if 0 <= days_left <= days:
             expiring_list.append(member)
     return expiring_list
+
+
+def count_members_of_types(member_list, *membership_types):
+    """Count the members whose type is any of the types passed in, e.g.
+    count_members_of_types(members, "VIP", "Family"). The * in
+    *membership_types collects any number of types into one tuple."""
+    wanted_types = set(membership_types)
+    counted = 0
+    for member in member_list:
+        if member.get_membership_type() in wanted_types:
+            counted += 1
+    return counted
+
+
+def members_summary_numbers(member_list, days=EXPIRY_WARNING_DAYS):
+    """Return FOUR values at once: (total, active, expired, expiring_soon).
+    The caller unpacks them: total, active, expired, soon = members_summary_numbers(list)."""
+    active_count = 0
+    for member in member_list:
+        if member_status(member) == "Active":
+            active_count += 1
+    total_count = count_members(member_list)
+    expiring_count = len(members_expiring_within(member_list, days=days))
+    return total_count, active_count, total_count - active_count, expiring_count
 
 
 def count_members(member_list):
@@ -476,9 +504,11 @@ def members_summary():
     for membership_type in common.MEMBERSHIP_TYPES:
         if membership_type in type_counts:
             count_parts.append(f"{membership_type} {type_counts[membership_type]}")
-    expiring_count = len(members_expiring_within(all_members, 30))
-    return (f"{count_members(all_members)} members ({', '.join(count_parts)}). "
-            f"{expiring_count} expiring in the next 30 days.")
+    total_count, active_count, expired_count, expiring_count = members_summary_numbers(all_members)
+    premium_count = count_members_of_types(all_members, "VIP", "Family")
+    return (f"{total_count} members ({active_count} active, {expired_count} expired; "
+            f"{', '.join(count_parts)}). {premium_count} are VIP or Family. "
+            f"{expiring_count} expiring in the next {EXPIRY_WARNING_DAYS} days.")
 
 
 def build_manage_members_page(page_frame, page_hooks):
@@ -669,7 +699,8 @@ def build_register_page(section_frame, page_hooks):
     def on_register():
         """Register the person with the chosen membership type."""
         try:
-            new_member = register_member(name_entry.get(), phone_entry.get(), register_state["type"])
+            new_member = register_member(name_entry.get(), phone_entry.get(),
+                                       membership_type=register_state["type"])
         except (ValueError, OSError) as error:
             show_problem(error)
             return

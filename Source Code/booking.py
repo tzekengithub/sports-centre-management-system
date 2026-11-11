@@ -604,6 +604,55 @@ def save_day_sheet(date_text):
             sheet_file.close()
 
 
+def hours_text(*hours):
+    """Words for any number of hours, e.g. hours_text(10, 11, 14) gives
+    '10:00, 11:00 and 14:00'. The * in *hours collects however many hours the
+    caller passes into one tuple."""
+    if len(hours) == 0:
+        return "no hours"
+    hour_names = []
+    for hour in hours:
+        hour_names.append(f"{hour:02d}:00")
+    if len(hour_names) == 1:
+        return hour_names[0]
+    return ", ".join(hour_names[:-1]) + " and " + hour_names[-1]
+
+
+def booking_field(booking, field_name):
+    """Return one named field of a booking (used by filter_bookings)."""
+    match field_name:
+        case "sport":
+            return booking.get_sport()
+        case "status":
+            return booking.get_status()
+        case "court_no":
+            return booking.get_court_no()
+        case "date_text":
+            return booking.get_date_text()
+        case "member_id":
+            return booking.get_member_id()
+        case "start_hour":
+            return booking.get_start_hour()
+        case _:
+            raise ValueError(f"Bookings have no field called {field_name}.")
+
+
+def filter_bookings(booking_list, **conditions):
+    """Return the bookings that match EVERY keyword condition, e.g.
+    filter_bookings(all_bookings, status="CONFIRMED", sport="Tennis"). The **
+    in **conditions collects the keyword arguments into a dictionary, so
+    the caller can give as many (or as few) conditions as needed."""
+    matches = []
+    for booking in booking_list:
+        everything_matches = True
+        for field_name, wanted_value in conditions.items():
+            if booking_field(booking, field_name) != wanted_value:
+                everything_matches = False
+        if everything_matches:
+            matches.append(booking)
+    return matches
+
+
 def booking_time_text(booking):
     """Return a booking's time as e.g. '18:00-20:00'."""
     end_hour = booking.get_start_hour() + booking.get_duration_hrs()
@@ -875,12 +924,10 @@ def build_view_all_page(page_frame):
 
     def summary_text():
         """Count bookings by status under the list."""
-        status_counts = {}
-        for booking in load_all_bookings():
-            status_counts[booking.get_status()] = status_counts.get(booking.get_status(), 0) + 1
+        all_bookings = load_all_bookings()
         parts = []
         for status in common.BOOKING_STATUSES:
-            parts.append(f"{status_counts.get(status, 0)} {status.lower()}")
+            parts.append(f"{len(filter_bookings(all_bookings, status=status))} {status.lower()}")
         return "Bookings on record: " + ", ".join(parts) + ". Cancelled bookings are kept, never deleted."
 
     return common.build_pick_page(page_frame, ALL_LIST_HEADER, load_rows, None, None,
@@ -1318,13 +1365,20 @@ def build_book_page(section_frame, page_hooks):
             return
         summary_lines = []
         total_price = 0
+        booked_hours = []
         for new_booking in new_bookings:
             summary_lines.append(f"{new_booking.get_booking_id()}: Court {new_booking.get_court_no()}, "
                                  f"{booking_time_text(new_booking)}  (RM {new_booking.get_price():.2f})")
             total_price = total_price + new_booking.get_price()
+            for booked_hour in range(new_booking.get_start_hour(),
+                                     new_booking.get_start_hour() + new_booking.get_duration_hrs()):
+                booked_hours.append(booked_hour)
+        # The list is passed on as separate arguments with * (argument unpacking).
         messagebox.showinfo("Booked", (f"{len(new_bookings)} booking(s) confirmed for "
                                        f"{new_bookings[0].get_sport()} on {new_bookings[0].get_date_text()}:\n\n"
-                                       + "\n".join(summary_lines) + f"\n\nTotal: RM {total_price:.2f}"))
+                                       + "\n".join(summary_lines)
+                                       + f"\n\nHours: {hours_text(*booked_hours)}"
+                                       + f"\nTotal: RM {total_price:.2f}"))
         clear_selection_and_redraw()
 
     book_button = common.make_button(book_bar, "Book", on_book,

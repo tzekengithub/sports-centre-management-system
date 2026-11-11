@@ -419,6 +419,22 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
 
 
+## Function parameters: *args, **kwargs, defaults, several return values (Entry 30)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| PA-01 | `hours_text(*hours)` | 0, 1, 2 hours; a list passed with `*` | "no hours", "09:00", "09:00 and 10:00", "10:00, 11:00 and 14:00" | Exactly so | PASS |
+| PA-02 | Booked message | book 3 hours on Book a Court (2 bookings) | Message ends with "Hours: 10:00, 11:00 and 18:00" and the total | Exactly so | PASS |
+| PA-03 | `filter_bookings(**conditions)` | status only; status + sport; no condition; an unknown field | 1 cancelled; BKG002; all; ValueError "no field called colour" | Exactly so | PASS |
+| PA-04 | View All counts | open View All Bookings | Counts per status come from `filter_bookings` | Same numbers as before | PASS |
+| PA-05 | `members_summary_numbers` | the 4 sample members | Returns (total, active, expired, expiring) = 4 values; default days = 30 | Exactly so | PASS |
+| PA-06 | `count_members_of_types(*types)` | "VIP","Annual" / one type / none | 2 / 1 / 0 | Exactly so | PASS |
+| PA-07 | Manage Members summary | open the page | Line shows active, expired, "N are VIP or Family", expiring in 30 days | Exactly so | PASS |
+| PA-08 | Keyword call | `register_member(name, phone, membership_type="Annual")` | Member saved as Annual | Exactly so | PASS |
+| PA-09 | `classes_matching(**conditions)` | coach; coach + type; no match | CLS001; 1 class; [] ; `classes_for_coach` unchanged | Exactly so | PASS |
+| PA-10 | `ids_text(*ids)` and coach delete | delete CCH001 (has CLS001) | "Coach CCH001 still has 1 upcoming class(es): CLS001. ..." | Exactly so | PASS |
+| PA-11 | `money_total(*amounts)` | none; 1.1+2.2+3.3; `*dict.values()` | 0; 6.6; 15.5; Daily Revenue grand total = sum of the categories | Exactly so | PASS |
+
 ## Booking colours and badges
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

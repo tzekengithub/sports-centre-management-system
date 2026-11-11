@@ -243,13 +243,51 @@ def update_coach(coach_id, new_name, new_phone, new_sport, new_rate, new_commiss
     return changed_class_count
 
 
+def class_field(sports_class, field_name):
+    """Return one named field of a class (used by classes_matching)."""
+    match field_name:
+        case "coach_id":
+            return sports_class.get_coach_id()
+        case "sport":
+            return sports_class.get_sport()
+        case "class_type":
+            return sports_class.get_class_type()
+        case "date_text":
+            return sports_class.get_date_text()
+        case "start_hour":
+            return sports_class.get_start_hour()
+        case _:
+            raise ValueError(f"Classes have no field called {field_name}.")
+
+
+def classes_matching(class_list, **conditions):
+    """Return the classes that match EVERY keyword condition, e.g.
+    classes_matching(all_classes, coach_id="CCH001", class_type="Group").
+    The ** in **conditions collects the keyword arguments into a dictionary."""
+    matches = []
+    for sports_class in class_list:
+        everything_matches = True
+        for field_name, wanted_value in conditions.items():
+            if class_field(sports_class, field_name) != wanted_value:
+                everything_matches = False
+        if everything_matches:
+            matches.append(sports_class)
+    return matches
+
+
+def ids_text(*record_ids):
+    """Words for any number of IDs, e.g. ids_text("CLS001", "CLS002", "CLS003")
+    gives 'CLS001, CLS002 and CLS003'. The * in *record_ids collects the IDs."""
+    if len(record_ids) == 0:
+        return "none"
+    if len(record_ids) == 1:
+        return record_ids[0]
+    return ", ".join(record_ids[:-1]) + " and " + record_ids[-1]
+
+
 def classes_for_coach(coach_id):
     """Return every class (past or upcoming) taught by coach_id."""
-    coach_classes = []
-    for sports_class in load_all_classes():
-        if sports_class.get_coach_id() == coach_id:
-            coach_classes.append(sports_class)
-    return coach_classes
+    return classes_matching(load_all_classes(), coach_id=coach_id)
 
 
 def upcoming_classes_for_coach(coach_id):
@@ -271,9 +309,13 @@ def delete_coach(coach_id):
     coach_record = find_coach_by_id(coach_list, coach_id)
     if coach_record is None:
         raise ValueError(f"No coach found with ID {coach_id}.")
-    upcoming_count = len(upcoming_classes_for_coach(coach_id))
-    if upcoming_count > 0:
-        raise ValueError(f"Coach {coach_id} still has {upcoming_count} upcoming class(es). Delete those "
+    upcoming_ids = []
+    for upcoming_class in upcoming_classes_for_coach(coach_id):
+        upcoming_ids.append(upcoming_class.get_class_id())
+    if len(upcoming_ids) > 0:
+        # *upcoming_ids passes the list on as separate arguments.
+        raise ValueError(f"Coach {coach_id} still has {len(upcoming_ids)} upcoming class(es): "
+                         f"{ids_text(*upcoming_ids)}. Delete those "
                          "classes in Manage Classes first (past classes can stay).")
     past_count = len(classes_for_coach(coach_id))
     if past_count > 0 and not coach_record.is_active():

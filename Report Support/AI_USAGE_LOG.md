@@ -730,6 +730,24 @@ Ctrl+wheel/+/- shortcuts that scale every font in place (no `tkinter.font`,
 no rebuild), resize the window, and save the level in `settings.txt`.
 Checked by driving the buttons in a launched window.
 
+## Entry 30 - More parameter styles in every module
+- **Asked:** "add multiple variables passed etc into the system". I read
+  this as the rubric's user-defined-functions row: functions that take
+  several parameters, have defaults, return several values, use keyword
+  arguments, `*args` and `**kwargs`. (If something else was meant, say so.)
+- **Found by scanning:** every module already had many-parameter
+  functions and defaults, but membership.py had no multi-value return and
+  no keyword-argument call, and no module used `*args` or `**kwargs`.
+- **Produced (each one wired into a screen, nothing decorative):**
+  - booking.py: `hours_text(*hours)` (Booked message), `filter_bookings(**conditions)` with `booking_field` (View All counts).
+  - membership.py: `members_summary_numbers` (4 return values), default `days=EXPIRY_WARNING_DAYS`, `count_members_of_types(*types)`, keyword call to `register_member`; the Manage Members summary line now also shows active/expired and VIP+Family.
+  - coaching.py: `classes_matching(**conditions)` with `class_field` (behind `classes_for_coach`), `ids_text(*ids)` (the "coach still has upcoming classes" message now names them).
+  - billing.py: `money_total(*amounts)` (Daily Revenue grand total), keyword-argument call to `generate_bill`.
+- **Visible changes:** the Booked message gains an "Hours:" line; the Manage
+  Members summary line is longer; the coach-delete refusal lists class IDs.
+- **Verify:** PA-01 to PA-11 in `TEST_CASES.md` (29 checks, plus the
+  Booked message driven through the real screen); all earlier suites pass.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

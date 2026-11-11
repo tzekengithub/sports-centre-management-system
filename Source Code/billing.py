@@ -459,6 +459,15 @@ def delete_void_bill(bill_id):
     common.rewrite_records(common.BILLS_FILE, remaining_lines, line_to_bill)
 
 
+def money_total(*amounts):
+    """Add up any number of money amounts and round to sen (2 decimals). The *
+    in *amounts collects however many amounts the caller passes into a tuple."""
+    total = 0.0
+    for amount in amounts:
+        total += amount
+    return round(total, 2)
+
+
 def daily_revenue_summary(date_text):
     """Return (category_totals_dict, grand_total, bill_count, paid_count,
     unpaid_count) for bills dated date_text. The totals count only PAID
@@ -469,7 +478,6 @@ def daily_revenue_summary(date_text):
     category_totals = {}
     for category in common.BILL_CATEGORIES:
         category_totals[category] = 0.0
-    grand_total = 0.0
     bill_count = 0
     paid_count = 0
     unpaid_count = 0
@@ -481,10 +489,11 @@ def daily_revenue_summary(date_text):
         if bill.get_payment_status() == "PAID":
             paid_count += 1
             category_totals[bill.get_category()] += bill.get_total()
-            grand_total += bill.get_total()
         elif bill.get_payment_status() == "UNPAID":
             unpaid_count += 1
 
+    # The category totals are passed as separate arguments with * (unpacking).
+    grand_total = money_total(*category_totals.values())
     return category_totals, grand_total, bill_count, paid_count, unpaid_count
 
 
@@ -892,7 +901,8 @@ def build_create_bill_page(section_frame, page_hooks):
         try:
             if category == "RETAIL":
                 retail_amount = common.parse_decimal(price_entry.get(), "Price", 0.01, MAX_RETAIL_AMOUNT)
-                new_bill = generate_bill(member_id, category, "MANUAL", item_entry.get(), retail_amount)
+                new_bill = generate_bill(member_id, category, "MANUAL", retail_item_name=item_entry.get(),
+                                         retail_amount=retail_amount)
             elif category == "MEMBERSHIP":
                 new_bill = generate_bill(member_id, category, "FEE")
             else:
