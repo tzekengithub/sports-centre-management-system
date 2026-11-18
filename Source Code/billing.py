@@ -197,6 +197,15 @@ def get_booking_description(booking_id):
     raise ValueError(f"No booking found with ID {booking_id}.")
 
 
+def booking_is_cancelled(booking_id):
+    """Return True if booking_id exists and its status is CANCELLED."""
+    for line in common.read_lines(common.BOOKINGS_FILE):
+        fields = common.split_fields(line, BOOKING_FIELD_COUNT)
+        if fields is not None and fields[0] == booking_id:
+            return fields[7] == "CANCELLED"
+    return False
+
+
 def get_class_description(class_id):
     """Return (amount, description) for a class, using fee_per_pax."""
     for line in common.read_lines(common.CLASSES_FILE):
@@ -225,6 +234,11 @@ def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amo
     # A booking or class must not be billed twice for the same member.
     if category in ("COURT", "COACHING") and (category, ref_id) in billed_references(member_id):
         raise ValueError(f"{ref_id} has already been billed to {member_id}.")
+
+    if category == "COURT" and booking_is_cancelled(ref_id):
+        # A cancelled booking can't be charged for (otherwise the bill would
+        # sit UNPAID for ever and block deleting the member).
+        raise ValueError(f"Booking {ref_id} is cancelled, so it can't be billed.")
 
     match category:
         case "COURT":

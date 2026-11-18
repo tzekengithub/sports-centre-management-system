@@ -1578,6 +1578,8 @@ def ensure_data_files_exist():
         if not os.path.isfile(file_path):
             write_lines(file_path, sample_lines)
             is_first_run = True
+            if file_path == BILLS_FILE:
+                write_sample_receipts(sample_lines)
 
     # Remember the highest ID already in every file (sample rows, or rows
     # typed in by hand), so deleting one of them never frees its ID.
@@ -1585,6 +1587,30 @@ def ensure_data_files_exist():
         remember_highest_ids(read_lines(file_path))
 
     return is_first_run
+
+
+def write_sample_receipts(bill_lines):
+    """Write a receipt file for each PAID sample bill (so View Receipt has
+    something to show). Same layout as billing.write_receipt."""
+    for bill_line in bill_lines:
+        fields = bill_line.split("|")
+        if fields[8] != "PAID":
+            continue
+        receipt_lines = [
+            "SPORTS CENTRE - PAYMENT RECEIPT",
+            "--------------------------------",
+            "Bill ID       : " + fields[0],
+            "Member ID     : " + fields[1],
+            "Description   : " + fields[4],
+            f"Amount        : RM {float(fields[5]):.2f}",
+            f"Discount      : RM {float(fields[6]):.2f}",
+            f"Total Paid    : RM {float(fields[7]):.2f}",
+            "Payment Method: Cash",
+            f"Tendered      : RM {float(fields[7]):.2f}",
+            "Change        : RM 0.00",
+            "Printed At    : " + fields[9] + " 09:00:00",
+        ]
+        write_lines(os.path.join(RECEIPT_FOLDER, fields[0] + ".txt"), receipt_lines)
 
 
 def read_lines(file_path):
@@ -1868,23 +1894,35 @@ def build_sample_rows():
         "MEM002|Siti Nurhaliza|0134567890|Annual|" + add_days_to_date(today, -200) + "|" + add_days_to_date(today, 165),
         "MEM003|Wong Mei Ling|0169876543|Monthly|" + add_days_to_date(today, -5) + "|" + add_days_to_date(today, 25),
         "MEM004|Ravi Kumar|0145551234|Pay-As-You-Go|" + add_days_to_date(today, -300) + "|" + add_days_to_date(today, 65),
+        # Demo Delete has no bookings, bills or classes, so Delete works for them.
+        "MEM005|Demo Delete|0156667788|Monthly|" + add_days_to_date(today, -3) + "|" + add_days_to_date(today, 27),
     ]
     booking_rows = [
         "BKG001|MEM001|Badminton|2|" + add_days_to_date(today, 5) + "|18|2|CONFIRMED",
         "BKG002|MEM002|Futsal|1|" + add_days_to_date(today, 8) + "|20|1|CONFIRMED",
         "BKG003|MEM003|Tennis|1|" + add_days_to_date(today, 3) + "|9|1|CANCELLED",
+        # BKG004 has an UNPAID bill (BIL003): Cancel says "Void the bill first".
+        "BKG004|MEM003|Tennis|2|" + add_days_to_date(today, 6) + "|11|1|CONFIRMED",
     ]
     coach_rows = [
         "CCH001|Lim Wei|0171234567|Badminton|60.00|30.00|ACTIVE",
         "CCH002|Nurul Izzah|0192223344|Tennis|70.00|25.00|ACTIVE",
+        # CCH003 has never taught (Delete removes). CCH004 has only a past
+        # class (Delete makes them INACTIVE so the history stays).
+        "CCH003|Demo Coach|0183334455|Squash|45.00|20.00|ACTIVE",
+        "CCH004|Tan Mei Hua|0164445566|Futsal|55.00|22.00|ACTIVE",
     ]
     class_rows = [
         "CLS001|CCH001|Badminton|Group|" + add_days_to_date(today, 4) + "|10|1|8|25.00|MEM001;MEM003",
         "CLS002|CCH002|Tennis|Private|" + add_days_to_date(today, 7) + "|14|1|1|50.00|MEM002",
+        "CLS003|CCH004|Futsal|Group|" + add_days_to_date(today, -3) + "|10|1|6|20.00|MEM004",
     ]
     bill_rows = [
         "BIL001|MEM001|COURT|BKG001|Badminton Court 2, 2h|40.00|8.00|32.00|PAID|" + today,
         "BIL002|MEM002|COACHING|CLS002|Tennis Private Lesson|50.00|0.00|50.00|UNPAID|" + today,
+        "BIL003|MEM003|COURT|BKG004|Tennis Court 2, 1h|30.00|0.00|30.00|UNPAID|" + today,
+        "BIL004|MEM004|MEMBERSHIP|NA|Pay-As-You-Go Membership Fee|0.00|0.00|0.00|VOID|" + today,
+        "BIL005|MEM004|RETAIL|MANUAL|Retail item: Towel|15.00|0.00|15.00|PAID|" + today,
     ]
 
     return {

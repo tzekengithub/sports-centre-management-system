@@ -419,6 +419,18 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
 
 
+## Demo data and delete rules (Entry 31)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| DM-01 | Billed booking can't be cancelled | Book, bill (UNPAID), cancel | "Void the bill in Billing first." | Exactly so | PASS |
+| DM-02 | Void, cancel, delete member | Void bill, cancel booking, delete member | All succeed | Exactly so | PASS |
+| DM-03 | Partial cancel of billed booking | `cancel_booking_hours` on billed booking | Same "Void the bill" refusal | Exactly so | PASS |
+| DM-04 | Bill a CANCELLED booking (bug found) | `generate_bill(member, "COURT", cancelled_id)` | Refused: "Booking BKGnnn is cancelled, so it can't be billed." (before the fix it made an UNPAID bill that blocked Delete) | Refused | PASS |
+| DM-05 | Fresh sample: Delete Demo Delete | Delete MEM005 | Removed | Removed | PASS |
+| DM-06 | Fresh sample demo walk | 25 checks: reschedule/cancel BKG002, BKG004 "Void the bill", BKG001 "paid", delete CCH003 (removed), CCH004 (INACTIVE), CCH001 (refused), enrol/remove/update/delete CLS001, Hours & Commission shows CLS003, pay BIL002, void BIL003, delete BIL004, receipts BIL001/BIL005, Daily Revenue | All as listed | All as listed | PASS |
+| DM-07 | Sample receipts | Fresh `data/` | `receipts/BIL001.txt` and `BIL005.txt` exist | Exist | PASS |
+
 ## Function parameters: *args, **kwargs, defaults, several return values (Entry 30)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

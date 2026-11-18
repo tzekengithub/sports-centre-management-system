@@ -748,6 +748,13 @@ Checked by driving the buttons in a launched window.
 - **Verify:** PA-01 to PA-11 in `TEST_CASES.md` (29 checks, plus the
   Booked message driven through the real screen); all earlier suites pass.
 
+## Entry 31 - Delete blocked by an unpaid bill; demo-ready sample data
+- **Asked:** a pasted prompt: Delete Member said "unpaid bill" even though the member's booking was cancelled; make the 20-minute demo smooth without removing safety rules.
+- **Found by testing first:** (1) booked-and-billed bookings can't be cancelled until the bill is voided, as designed; (2) on the user's real data the blocker was `BIL003`, an UNPAID *membership* fee bill for a member whose bookings were all cancelled (Billing > Void Bill clears it); (3) a real hole: `billing.generate_bill` accepted a CANCELLED booking, leaving an UNPAID bill nobody could cancel the booking for.
+- **Produced:** `billing.booking_is_cancelled` + a refusal in `generate_bill`; `common.build_sample_rows` extended (MEM005 Demo Delete, BKG004 + BIL003, CCH003 Demo Coach, CCH004 with past class CLS003, BIL004 VOID, BIL005 PAID retail); `common.write_sample_receipts` (receipts for PAID sample bills); `DEMO_SCRIPT.md`, `DEMO_DATA_SUMMARY.md`.
+- **Not changed:** the delete rules, message texts, file formats.
+- **Verify:** DM-01..DM-07 in `TEST_CASES.md`.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their
