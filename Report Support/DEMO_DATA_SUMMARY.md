@@ -14,6 +14,7 @@ Real bug found (case 5): `generate_bill` accepted a CANCELLED booking, creating 
 - Bookings: BKG002 (no bill: reschedule/cancel), BKG004 (UNPAID bill BIL003), BKG001 (PAID bill), BKG003 (cancelled).
 - Coaches: CCH003 never taught, CCH004 past class only, CCH001/CCH002 have upcoming classes.
 - Classes: CLS001 (group, free places, no bill), CLS002 (private, UNPAID BIL002), CLS003 (past).
+- Membership fee: MEM001 and MEM002 fees are still billable (live demo); MEM003's is already paid (BIL006, dated 5 days ago), and Renew brings it back; MEM004 (Pay-As-You-Go) has no fee.
 - Bills: BIL002 pay, BIL003 void, BIL004 VOID (delete), BIL001 PAID + receipt, BIL005 PAID retail today + receipt.
 
 ## 4. Test results (all run for real)

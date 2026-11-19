@@ -755,6 +755,13 @@ Checked by driving the buttons in a launched window.
 - **Not changed:** the delete rules, message texts, file formats.
 - **Verify:** DM-01..DM-07 in `TEST_CASES.md`.
 
+## Entry 32 - Membership fee could be billed again and again
+- **Asked:** a pasted bug report (Billing): after a membership fee was billed and paid, Create Bill still offered it, and could be clicked again.
+- **Reproduced first** on a temporary copy through the real window: court and class were already correct for UNPAID/PAID/VOID; the membership fee was offered in every state and a second bill was really created. Hand-edited rows with different spelling or spaces (lower-case or spaced IDs) slipped past the court/class check.
+- **Produced:** `billing.membership_period_start`, `membership_bill_info`, `membership_fee_problem` (period = expiry minus the type's duration, which is exactly how Register and Renew set it); the check inside `generate_bill`; the Create Bill note, hidden total and disabled button; `billed_references` ignores spelling/spaces; `MEMBERSHIP_DURATION_DAYS` moved from membership.py to common.py (billing does not import membership); demo bill BIL006.
+- **Decision:** Pay-As-You-Go (RM 0.00) has nothing to bill. A bill dated the same day as a Renew still counts for the new period (limitation: bill again the next day).
+- **Verify:** FEE-01..08, CC-01/02, GUI-01..07 in `TEST_CASES.md`.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

@@ -75,12 +75,6 @@ class Member(common.Person):
 CARD_PICTURE_WIDTH = 240
 CARD_PICTURE_MAX_WIDTH = 260
 
-MEMBERSHIP_DURATION_DAYS = {
-    "Annual": 365, "Monthly": 30, "Pay-As-You-Go": 365,
-    "VIP": 365, "Youth": 180, "Senior": 365, "Family": 365,
-}
-
-
 MEMBER_FIELD_COUNT = 6
 
 
@@ -134,7 +128,7 @@ def register_member(name, phone, membership_type):
         raise ValueError("This phone number is already registered.")
 
     join_date = common.today_string()
-    duration_days = MEMBERSHIP_DURATION_DAYS.get(membership_type, 365)
+    duration_days = common.MEMBERSHIP_DURATION_DAYS.get(membership_type, 365)
     expiry_date = common.add_days_to_date(join_date, duration_days)
     new_id = common.generate_id(common.MEMBERS_FILE, "MEM")
 
@@ -251,7 +245,7 @@ def renew_member(member_id):
     # rewritten as a whole.
     for member in member_list:
         if member.get_member_id() == member_id:
-            duration_days = MEMBERSHIP_DURATION_DAYS.get(member.get_membership_type(), 365)
+            duration_days = common.MEMBERSHIP_DURATION_DAYS.get(member.get_membership_type(), 365)
             new_expiry = common.add_days_to_date(common.today_string(), duration_days)
             member.set_expiry_date(new_expiry)
         updated_lines.append(member.to_line())
@@ -620,7 +614,7 @@ def build_register_page(section_frame, page_hooks):
     def type_caption(membership_type):
         """Return the one-line caption built from the real fee, duration and discount."""
         fee = common.MEMBERSHIP_FEES[membership_type]
-        days = MEMBERSHIP_DURATION_DAYS[membership_type]
+        days = common.MEMBERSHIP_DURATION_DAYS[membership_type]
         discount = common.MEMBER_DISCOUNT_PCT[membership_type]
         if fee == 0:
             fee_text = "No fee"
@@ -649,7 +643,7 @@ def build_register_page(section_frame, page_hooks):
             summary_label.config(text="Click a card to choose a type.")
             register_button.config(state="disabled")
         else:
-            expiry = common.add_days_to_date(common.today_string(), MEMBERSHIP_DURATION_DAYS[chosen_type])
+            expiry = common.add_days_to_date(common.today_string(), common.MEMBERSHIP_DURATION_DAYS[chosen_type])
             summary_label.config(text=(f"{chosen_type}: RM {common.MEMBERSHIP_FEES[chosen_type]:.2f}, "
                                        f"valid until {expiry}"))
             register_button.config(state="normal")
@@ -685,7 +679,7 @@ def build_register_page(section_frame, page_hooks):
             type_button.grid(row=type_index // 4, column=type_index % 4, padx=3, pady=3)
         common.add_tooltip(type_button, (
             f"Choose {membership_type}: RM {common.MEMBERSHIP_FEES[membership_type]:.2f} fee, lasts "
-            f"{duration_text(MEMBERSHIP_DURATION_DAYS[membership_type])}, "
+            f"{duration_text(common.MEMBERSHIP_DURATION_DAYS[membership_type])}, "
             f"{common.MEMBER_DISCOUNT_PCT[membership_type]:g}% off court bookings and classes."))
         type_buttons[membership_type] = type_button
 

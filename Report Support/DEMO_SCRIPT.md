@@ -28,6 +28,11 @@ Start from a deleted `Source Code/data/` so the sample rows below exist. Dates a
 | 22 | Billing > Void Bill | BIL003 | Voided |
 | 23 | Booking > Cancel | BKG004 again | Now cancelled |
 | 24 | Billing > Delete Bill | BIL004 (VOID) | Deleted |
+| 24a | Billing > Create Bill | Member MEM003 (fee already paid, BIL006), Membership Fee | Note "Membership fee already billed (BIL006, paid). Renew the membership in Membership to bill again."; no total; Create Bill disabled |
+| 24b | Billing > Create Bill | Member MEM001 (fee still billable), Membership Fee, Create Bill | RM 1200.00 offered; bill created (unpaid); page then says "...already billed (BIL007, not paid yet)..." |
+| 24c | Membership > Renew Membership, then Billing > Create Bill | Renew MEM003 (its fee was paid 5 days ago in the sample data), then Membership Fee for MEM003 | RM 60.00 fee offered again |
 | 25 | Billing > Create Bill | Retail item, amount | New UNPAID bill |
 | 26 | Billing > Daily Revenue | Today | PAID totals (BIL001, BIL005, BIL002) |
 | 27 | Home | Theme toggle, zoom A+ | Colours and text size change in place |
+
+**Fee demo rule:** use MEM001 (fee still billable) and MEM003 (fee already paid, 5 days ago). Do NOT pay a member's fee, Renew the same member and bill again on the same day: a fee billed today still counts for the renewed period until tomorrow. Step 2 (Renew MEM001) comes before MEM001's fee is billed, so the script never does that.

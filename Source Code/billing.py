@@ -232,8 +232,12 @@ def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amo
     discount_pct = common.MEMBER_DISCOUNT_PCT.get(member_type, 0.0)
 
     # A booking or class must not be billed twice for the same member.
-    if category in ("COURT", "COACHING") and (category, ref_id) in billed_references(member_id):
+    if category in ("COURT", "COACHING") and (category, ref_id.strip().upper()) in billed_references(member_id):
         raise ValueError(f"{ref_id} has already been billed to {member_id}.")
+    if category == "MEMBERSHIP":
+        fee_problem = membership_fee_problem(member_id)
+        if fee_problem is not None:
+            raise ValueError(fee_problem[0])
 
     if category == "COURT" and booking_is_cancelled(ref_id):
         # A cancelled booking can't be charged for (otherwise the bill would
@@ -275,13 +279,69 @@ def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amo
     return new_bill
 
 
+def membership_period_start(member_id):
+    """Return the date (YYYY-MM-DD) the member's CURRENT membership period
+    began, or None if the member or the date can't be read. Register and
+    Renew both set expiry = start + the type's duration, so the start is
+    simply expiry minus that duration. Read straight from members.txt
+    (billing does not import membership.py)."""
+    for line in common.read_lines(common.MEMBERS_FILE):
+        fields = common.split_fields(line, MEMBER_FIELD_COUNT)
+        if fields is None or fields[0] != member_id:
+            continue
+        if not common.is_valid_date(fields[5]):
+            return None
+        duration_days = common.MEMBERSHIP_DURATION_DAYS.get(fields[3], 365)
+        return common.add_days_to_date(common.normalize_date(fields[5]), -duration_days)
+    return None
+
+
+def membership_bill_info(member_id):
+    """Return (bill_id, status) of a membership-fee bill (not VOID) dated on
+    or after the start of the member's current period, or None. The ref_id
+    is ignored because the screen saves "FEE" and the sample data "NA"."""
+    period_start = membership_period_start(member_id)
+    if period_start is None:
+        return None
+    found_bill = None
+    for bill in load_all_bills():
+        if bill.get_member_id() != member_id or bill.get_category().strip().upper() != "MEMBERSHIP":
+            continue
+        status = bill.get_payment_status().strip().upper()
+        if status == "VOID" or not common.is_valid_date(bill.get_date_text()):
+            continue
+        if common.normalize_date(bill.get_date_text()) >= period_start:
+            # a PAID bill is reported before an UNPAID one
+            if found_bill is None or status == "PAID":
+                found_bill = (bill.get_bill_id(), status)
+    return found_bill
+
+
+def membership_fee_problem(member_id):
+    """Return None if the member's membership fee can be billed now, or a
+    tuple (error text for generate_bill, note for the Create Bill page).
+    A fee can't be billed twice in one period, and Pay-As-You-Go has no fee."""
+    member_type = get_member_type(member_id)
+    if member_type is not None and common.MEMBERSHIP_FEES.get(member_type, 0.0) <= 0.0:
+        text = f"{member_type} has no membership fee, so there is nothing to bill."
+        return text, text
+    bill_info = membership_bill_info(member_id)
+    if bill_info is None:
+        return None
+    status_word = "paid" if bill_info[1] == "PAID" else "not paid yet"
+    return (f"Membership fee for {member_id} is already billed ({bill_info[0]}).",
+            f"Membership fee already billed ({bill_info[0]}, {status_word}). "
+            "Renew the membership in Membership to bill again.")
+
+
 def billed_references(member_id):
     """Return a set of (category, ref_id) pairs already billed to
     member_id on bills that are not VOID, used to stop double billing."""
     reference_set = set()
     for bill in load_all_bills():
-        if bill.get_member_id() == member_id and bill.get_payment_status() != "VOID":
-            reference_set.add((bill.get_category(), bill.get_ref_id()))
+        if bill.get_member_id() == member_id and bill.get_payment_status().strip().upper() != "VOID":
+            # Spelling and spaces in a hand-edited file must not hide a bill.
+            reference_set.add((bill.get_category().strip().upper(), bill.get_ref_id().strip().upper()))
     return reference_set
 
 
@@ -815,6 +875,9 @@ def build_create_bill_page(section_frame, page_hooks):
             detail_label.config(text="")
             if member_id is None:
                 note_label.config(text="Pick a member first.")
+            elif membership_fee_problem(member_id) is not None:
+                # Already billed this period (or no fee): say so instead of offering it.
+                note_label.config(text=membership_fee_problem(member_id)[1])
             else:
                 note_label.config(text=f"{member_types.get(member_id, '')} membership fee")
             note_label.grid(row=2, column=1, sticky="w", pady=4)
@@ -859,6 +922,8 @@ def build_create_bill_page(section_frame, page_hooks):
                     raise ValueError("Pick a class.")
                 amount, description = get_class_description(reference_choice_ids[reference_variable.get()])
             case "MEMBERSHIP":
+                if membership_fee_problem(member_id) is not None:
+                    raise ValueError(membership_fee_problem(member_id)[1])
                 amount = common.MEMBERSHIP_FEES.get(member_types[member_id], 0.0)
             case _:
                 amount = common.parse_decimal(price_entry.get(), "Price", 0.01, MAX_RETAIL_AMOUNT)
@@ -873,6 +938,8 @@ def build_create_bill_page(section_frame, page_hooks):
             # so; repeating "Pick a booking." underneath would be noise.
             if category_variable.get() in ("COURT", "COACHING") and len(reference_choice_ids) == 0:
                 preview_label.config(text="")
+            elif category_variable.get() == "MEMBERSHIP" and chosen_member_id() is not None:
+                preview_label.config(text="")  # the note above already explains it
             else:
                 preview_label.config(text=str(error), fg=common.MUTED_TEXT_COLOR)
             create_button.config(state="disabled")

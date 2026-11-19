@@ -55,6 +55,13 @@ SPORTS = {
 
 MEMBERSHIP_TYPES = ("Annual", "Monthly", "Pay-As-You-Go", "VIP", "Youth", "Senior", "Family")
 
+# How many days one membership period lasts (used by Register, Renew and by
+# Billing, which works out whether the current period's fee is already billed).
+MEMBERSHIP_DURATION_DAYS = {
+    "Annual": 365, "Monthly": 30, "Pay-As-You-Go": 365,
+    "VIP": 365, "Youth": 180, "Senior": 365, "Family": 365,
+}
+
 MEMBERSHIP_FEES = {
     "Annual": 600.0,
     "Monthly": 60.0,
@@ -1923,6 +1930,9 @@ def build_sample_rows():
         "BIL003|MEM003|COURT|BKG004|Tennis Court 2, 1h|30.00|0.00|30.00|UNPAID|" + today,
         "BIL004|MEM004|MEMBERSHIP|NA|Pay-As-You-Go Membership Fee|0.00|0.00|0.00|VOID|" + today,
         "BIL005|MEM004|RETAIL|MANUAL|Retail item: Towel|15.00|0.00|15.00|PAID|" + today,
+        # MEM003 (Monthly) already paid this period's fee: Create Bill says so. Renew
+        # starts a new period, after which the fee can be billed again.
+        "BIL006|MEM003|MEMBERSHIP|FEE|Monthly Membership Fee|60.00|3.00|57.00|PAID|" + add_days_to_date(today, -5),
     ]
 
     return {

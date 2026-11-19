@@ -419,6 +419,26 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
 
 
+## Membership fee billed once per period (Entry 32)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| FEE-01 | Demo: fee still billable | MEM001, MEM002 | `membership_fee_problem` is None | Exactly so | PASS |
+| FEE-02 | Demo: fee already paid | MEM003 (BIL006 PAID) | `membership_bill_info` = ("BIL006", "PAID") | Exactly so | PASS |
+| FEE-03 | Pay-As-You-Go | MEM004 | Nothing to bill; `generate_bill` refuses "Pay-As-You-Go has no membership fee, so there is nothing to bill." | Exactly so | PASS |
+| FEE-04 | Fee billed twice (UNPAID) | `generate_bill(MEM001, "MEMBERSHIP", "FEE")` twice | 2nd: "Membership fee for MEM001 is already billed (BILnnn)." | Exactly so | PASS |
+| FEE-05 | Fee billed twice (PAID, ref "NA") | pay the first, bill again | Refused; only one fee bill saved | Exactly so | PASS |
+| FEE-06 | VOID brings the fee back | void the fee bill | Billable again, and can be billed | Exactly so | PASS |
+| FEE-07 | Renew brings the fee back | MEM003 paid 5 days ago, then Renew | Billable after Renew; blocked again once billed | Exactly so | PASS |
+| FEE-08 | Last year's fee | PAID fee dated 400 days ago | Does not block this period; a "NA" bill this period does | Exactly so | PASS |
+| CC-01/02 | Court billed twice | BKG002, also typed " bkg002 " | 2nd refused, spelling and spaces ignored | Exactly so | PASS |
+| GUI-01 | Create Bill, MEM001, Membership Fee | open page | Amount RM 1200.00 shown, button usable | Exactly so | PASS |
+| GUI-02 | Create Bill, MEM003, Membership Fee | open page | Note "Membership fee already billed (BIL006, paid). Renew the membership in Membership to bill again."; no total; button disabled; clicking creates nothing | Exactly so | PASS |
+| GUI-03 | Create the fee bill | MEM001, Create Bill | "created" message; then note "...already billed (BIL007, not paid yet)..." and button disabled | Exactly so | PASS |
+| GUI-04 | After paying | pay it, reopen | Note says "paid" | Exactly so | PASS |
+| GUI-05 | Pay-As-You-Go page | MEM004 | Note "Pay-As-You-Go has no membership fee, so there is nothing to bill."; button disabled | Exactly so | PASS |
+| GUI-06/07 | Court list | Create Bill for BKG002; void it | Hidden ("Nothing left to bill for this member."); VOID brings it back | Exactly so | PASS |
+
 ## Demo data and delete rules (Entry 31)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |
