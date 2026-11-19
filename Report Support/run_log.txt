@@ -1,0 +1,84 @@
+
+file                                                       size  result  note
+Figure_01.png                                          1000x610  PASS    Home (light)
+Figure_54.png                                          1000x610  PASS    Home after starting
+Figure_02.png                                          1000x610  PASS    Book a Court in dark mode
+Figure_03.png                                          1000x610  PASS    
+Figure_04.png                                          1000x610  PASS    
+Figure_05.png                                          1000x610  PASS    
+Figure_06.png                                          1000x610  PASS    
+Figure_07.png                                          1000x610  PASS    
+Figure_08.png                                          1000x610  PASS    
+Figure_09.png                                          1000x610  PASS    
+Figure_10.png                                          1000x610  PASS    
+Figure_11.png                                          1000x610  PASS    
+Figure_12.png                                          1000x610  PASS    
+Figure_13.png                                          1000x610  PASS    
+Figure_14.png                                          1000x610  PASS    
+Figure_15.png                                          1000x610  PASS    
+Figure_16.png                                          1000x610  PASS    
+Figure_17.png                                          1000x610  PASS    
+Figure_18.png                                          1000x610  PASS    
+Figure_19.png                                          1000x610  PASS    
+Figure_20.png                                          1000x610  PASS    
+Figure_55.png                                          1000x610  PASS    menu
+Figure_56.png                                          1000x610  PASS    Book a Court filled
+Figure_57.png                                          1000x610  PASS    BKG002 picked
+Figure_58.png                                          1000x610  PASS    BKG002 picked
+Figure_59.png                                          1000x610  PASS    View All
+Figure_60.png                                          1000x610  PASS    menu
+Figure_61.png                                          1000x610  PASS    Register filled
+Figure_62.png                                          1000x610  PASS    MEM004 loaded
+Figure_63.png                                          1000x610  PASS    MEM001 picked
+Figure_64.png                                          1000x610  PASS    menu
+Figure_65.png                                          1000x610  PASS    CCH003 loaded
+Figure_66.png                                          1000x610  PASS    CLS001 loaded
+Figure_67.png                                          1000x610  PASS    CLS001 + member
+Figure_68.png                                          1000x610  PASS    CLS001 picked
+Figure_69.png                                          1000x610  PASS    hours
+Figure_70.png                                          1000x610  PASS    menu
+Figure_71.png                                          1000x610  PASS    member chosen
+Figure_72.png                                          1000x610  PASS    BIL002 picked
+Figure_73.png                                          1000x610  PASS    BIL003 picked
+Figure_74.png                                          1000x610  PASS    BIL001 picked
+Figure_75.png                                          1000x610  PASS    revenue
+Figure_08a_update_member.png                           1000x610  PASS    Member MEM004 saved.
+Figure_08b_delete_member_confirm.png                   1000x610  PASS    Delete member MEM005 Demo Delete permanently?
+Figure_08b2_delete_member_done.png                     1000x610  PASS    Member MEM005 deleted.
+Figure_10a_add_coach.png                               1000x610  PASS    Coach CCH005 Farah binti Ali added.
+Figure_10b_update_coach.png                            1000x610  PASS    Coach CCH003 saved.
+Figure_10c_delete_coach_confirm.png                    1000x610  PASS    Delete coach CCH003 Demo Coach permanently?
+Figure_11a_schedule_class.png                          1000x610  PASS    Class CLS004 scheduled: Badminton Group, 2026-11-24 10:00-11:00.
+Figure_11b_update_class.png                            1000x610  PASS    Class CLS001 saved.
+Figure_11c_delete_class_confirm.png                    1000x610  PASS    Delete class CLS001 (Badminton Group, 2026-11-22 10:00-11:00)?  2 member(s) are enrolled a
+Popup_success_booking_made.png                         1000x610  PASS    1 booking(s) confirmed for Badminton on 2026-11-19:  BKG005: Court 1, 08:00-11:00  (RM 60.
+Popup_confirm_cancel_booking.png                       1000x610  PASS    Cancel 08:00-09:00 of booking BKG005 (Badminton Court 1, 2026-11-19 08:00-11:00)? This fre
+Popup_success_booking_part_cancelled.png               1000x610  PASS    08:00-09:00 of booking BKG005 cancelled (kept on record as CANCELLED). BKG006: 09:00-11:00
+Popup_success_booking_cancelled.png                    1000x610  PASS    Booking BKG002 cancelled. It stays on record as CANCELLED (see View All Bookings).
+Popup_success_member_registered.png                    1000x610  PASS    Welcome, Aisyah binti Omar!  Member ID: MEM006 Monthly membership, valid until 2026-12-18 
+Popup_success_bill_paid.png                            1000x610  PASS    Bill BIL002 paid by Cash. Receipt saved.
+Popup_success_receipt_shown.png                        1000x610  PASS    SPORTS CENTRE - PAYMENT RECEIPT -------------------------------- Bill ID       : BIL001 Me
+Popup_confirm_remove_member.png                        1000x610  PASS    Remove MEM001 from CLS001?
+Popup_error_member_delete_blocked.png                  1000x610  PASS    Cannot delete: member has an upcoming confirmed booking.
+Popup_error_cancel_blocked_bill.png                    1000x610  PASS    Bill BIL003 charges for this booking. Void the bill in Billing first.
+Popup_error_class_full.png                             1000x610  PASS    This class is already full.
+Popup_error_coach_double_booked.png                    1000x610  PASS    This coach already has a class at that time.
+Popup_error_booking_in_past.png                        1000x610  PASS    You cannot book a date in the past.
+64 images, 0 failed
+POPUPS Figure_08a_update_member.png ['Member MEM004 saved.']
+POPUPS Figure_08b_delete_member_confirm.png ['Delete member MEM005 Demo Delete permanently?', 'Member MEM005 deleted.']
+POPUPS Figure_10a_add_coach.png ['Coach CCH005 Farah binti Ali added.']
+POPUPS Figure_10b_update_coach.png ['Coach CCH003 saved.']
+POPUPS Figure_10c_delete_coach_confirm.png ['Delete coach CCH003 Demo Coach permanently?', 'Coach CCH003 deleted.']
+POPUPS Figure_11a_schedule_class.png ['Class CLS004 scheduled: Badminton Group, 2026-11-24 10:00-11:00.']
+POPUPS Figure_11b_update_class.png ['Class CLS001 saved.']
+POPUPS Figure_11c_delete_class_confirm.png ['Delete class CLS001 (Badminton Group, 2026-11-22 10:00-11:00)? /  / 2 member(s) are enrolled and wil', 'Class CLS001 deleted.']
+POPUPS Popup_success_booking_made.png ['1 booking(s) confirmed for Badminton on 2026-11-19: /  / BKG005: Court 1, 08:00-11:00  (RM 60.00) / ']
+POPUPS Popup_confirm_cancel_booking.png ['Cancel 08:00-09:00 of booking BKG005 (Badminton Court 1, 2026-11-19 08:00-11:00)? This frees the cou', '08:00-09:00 of booking BKG005 cancelled (kept on record as CANCELLED). / BKG006: 09:00-11:00 stays b']
+POPUPS None ['Move booking BKG002 from 2026-11-26 20:00-21:00 Court 1 / to 2026-11-17 20:00-21:00 Court 1?', 'You cannot book a date in the past.']
+POPUPS Popup_success_member_registered.png ['Welcome, Aisyah binti Omar! /  / Member ID: MEM006 / Monthly membership, valid until 2026-12-18 /  /']
+POPUPS Popup_success_bill_paid.png ['Bill BIL002 paid by Cash. Receipt saved.']
+POPUPS Popup_success_receipt_shown.png ['SPORTS CENTRE - PAYMENT RECEIPT / -------------------------------- / Bill ID       : BIL001 / Member']
+POPUPS Popup_confirm_remove_member.png ['Remove MEM001 from CLS001?', 'MEM001 removed from CLS001.']
+POPUPS Popup_error_class_full.png ['This class is already full.']
+POPUPS Popup_error_coach_double_booked.png ['This coach already has a class at that time.']

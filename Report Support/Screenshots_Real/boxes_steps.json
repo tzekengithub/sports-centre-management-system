@@ -1,0 +1,938 @@
+{
+ "Figure_55": [
+  {
+   "step": 1,
+   "label": "Booking tab",
+   "boxes": [
+    [
+     102,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Book a Court button",
+   "boxes": [
+    [
+     277,
+     172,
+     204,
+     44
+    ]
+   ]
+  }
+ ],
+ "Figure_60": [
+  {
+   "step": 1,
+   "label": "Membership tab",
+   "boxes": [
+    [
+     204,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Register button",
+   "boxes": [
+    [
+     286,
+     172,
+     204,
+     44
+    ]
+   ]
+  }
+ ],
+ "Figure_61": [
+  {
+   "step": 1,
+   "label": "Membership tab",
+   "boxes": [
+    [
+     204,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Name and Phone boxes",
+   "boxes": [
+    [
+     63,
+     136,
+     384,
+     21
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "chosen membership card",
+   "boxes": [
+    [
+     249,
+     207,
+     230,
+     149
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Register button",
+   "boxes": [
+    [
+     904,
+     522,
+     80,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_62": [
+  {
+   "step": 1,
+   "label": "Membership tab",
+   "boxes": [
+    [
+     204,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked member row and edit fields",
+   "boxes": [
+    [
+     17,
+     275,
+     626,
+     26
+    ],
+    [
+     804,
+     187,
+     165,
+     88
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Save Changes and Delete beside a member",
+   "boxes": [
+    [
+     752,
+     329,
+     114,
+     34
+    ],
+    [
+     649,
+     277,
+     54,
+     22
+    ]
+   ]
+  }
+ ],
+ "Figure_63": [
+  {
+   "step": 1,
+   "label": "Membership tab",
+   "boxes": [
+    [
+     204,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked member row",
+   "boxes": [
+    [
+     16,
+     198,
+     637,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Renew button",
+   "boxes": [
+    [
+     697,
+     286,
+     70,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_64": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Manage Coaches button",
+   "boxes": [
+    [
+     174,
+     172,
+     204,
+     44
+    ]
+   ]
+  }
+ ],
+ "Figure_65": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "coach form fields and New button",
+   "boxes": [
+    [
+     790,
+     204,
+     179,
+     185
+    ],
+    [
+     765,
+     403,
+     57,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "picked coach row and Save Changes",
+   "boxes": [
+    [
+     17,
+     266,
+     519,
+     26
+    ],
+    [
+     645,
+     403,
+     114,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Delete beside a coach",
+   "boxes": [
+    [
+     542,
+     268,
+     54,
+     22
+    ]
+   ]
+  }
+ ],
+ "Figure_66": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "class form fields and New button",
+   "boxes": [
+    [
+     766,
+     203,
+     203,
+     234
+    ],
+    [
+     749,
+     452,
+     57,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "picked class row and Save Changes",
+   "boxes": [
+    [
+     17,
+     240,
+     503,
+     26
+    ],
+    [
+     629,
+     452,
+     114,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Delete beside a class",
+   "boxes": [
+    [
+     526,
+     242,
+     54,
+     22
+    ]
+   ]
+  }
+ ],
+ "Figure_67": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked class row",
+   "boxes": [
+    [
+     16,
+     198,
+     637,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Member box",
+   "boxes": [
+    [
+     763,
+     333,
+     203,
+     26
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Enrol button",
+   "boxes": [
+    [
+     697,
+     375,
+     62,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_68": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked row",
+   "boxes": [
+    [
+     16,
+     198,
+     637,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Remove button",
+   "boxes": [
+    [
+     697,
+     376,
+     79,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_69": [
+  {
+   "step": 1,
+   "label": "Coaching tab",
+   "boxes": [
+    [
+     306,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "All time / Month choice",
+   "boxes": [
+    [
+     69,
+     155,
+     109,
+     27
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "coach name box and Search",
+   "boxes": [
+    [
+     287,
+     152,
+     206,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_70": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Create Bill button",
+   "boxes": [
+    [
+     174,
+     172,
+     204,
+     44
+    ]
+   ]
+  }
+ ],
+ "Figure_71": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Member box and Bill for choices",
+   "boxes": [
+    [
+     97,
+     152,
+     245,
+     26
+    ],
+    [
+     97,
+     186,
+     448,
+     27
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "booking box",
+   "boxes": [
+    [
+     97,
+     221,
+     249,
+     27
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "amount line and Create Bill button",
+   "boxes": [
+    [
+     31,
+     264,
+     382,
+     46
+    ],
+    [
+     31,
+     320,
+     93,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_72": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked unpaid bill",
+   "boxes": [
+    [
+     16,
+     214,
+     575,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "payment method and amount received",
+   "boxes": [
+    [
+     781,
+     318,
+     188,
+     27
+    ],
+    [
+     781,
+     354,
+     74,
+     21
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Pay button",
+   "boxes": [
+    [
+     635,
+     392,
+     52,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_73": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked unpaid bill",
+   "boxes": [
+    [
+     16,
+     198,
+     637,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Void Bill button",
+   "boxes": [
+    [
+     697,
+     316,
+     83,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_74": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked paid bill",
+   "boxes": [
+    [
+     16,
+     230,
+     637,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "View Receipt button",
+   "boxes": [
+    [
+     697,
+     316,
+     109,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_75": [
+  {
+   "step": 1,
+   "label": "Billing tab",
+   "boxes": [
+    [
+     408,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "date box",
+   "boxes": [
+    [
+     55,
+     135,
+     141,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Show button",
+   "boxes": [
+    [
+     202,
+     135,
+     63,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_56": [
+  {
+   "step": 1,
+   "label": "Booking tab",
+   "boxes": [
+    [
+     102,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "Date box and Sport buttons",
+   "boxes": [
+    [
+     55,
+     152,
+     533,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "selected hours on one court",
+   "boxes": [
+    [
+     76,
+     244,
+     78,
+     43
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Member box",
+   "boxes": [
+    [
+     93,
+     555,
+     203,
+     26
+    ]
+   ]
+  },
+  {
+   "step": 5,
+   "label": "Book button",
+   "boxes": [
+    [
+     908,
+     551,
+     61,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_57": [
+  {
+   "step": 1,
+   "label": "Booking tab",
+   "boxes": [
+    [
+     102,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked booking row",
+   "boxes": [
+    [
+     16,
+     230,
+     619,
+     15
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "new date, start time and court",
+   "boxes": [
+    [
+     751,
+     351,
+     141,
+     104
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Reschedule button",
+   "boxes": [
+    [
+     679,
+     471,
+     99,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_58": [
+  {
+   "step": 1,
+   "label": "Booking tab",
+   "boxes": [
+    [
+     102,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "picked booking row and search box",
+   "boxes": [
+    [
+     16,
+     230,
+     619,
+     15
+    ],
+    [
+     142,
+     135,
+     206,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "Cancel from and Cancel until",
+   "boxes": [
+    [
+     765,
+     351,
+     95,
+     62
+    ]
+   ]
+  },
+  {
+   "step": 4,
+   "label": "Cancel Booking button",
+   "boxes": [
+    [
+     679,
+     429,
+     125,
+     34
+    ]
+   ]
+  }
+ ],
+ "Figure_59": [
+  {
+   "step": 1,
+   "label": "Booking tab",
+   "boxes": [
+    [
+     102,
+     0,
+     102,
+     48
+    ]
+   ]
+  },
+  {
+   "step": 2,
+   "label": "search box",
+   "boxes": [
+    [
+     142,
+     135,
+     206,
+     34
+    ]
+   ]
+  },
+  {
+   "step": 3,
+   "label": "picked row and details panel",
+   "boxes": [
+    [
+     16,
+     214,
+     615,
+     15
+    ],
+    [
+     675,
+     181,
+     272,
+     156
+    ]
+   ]
+  }
+ ]
+}

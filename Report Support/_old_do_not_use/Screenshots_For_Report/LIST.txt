@@ -1,0 +1,50 @@
+Figure 1 | Home tab of the main window | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_01_Home_tab_of_the_main_window.png
+Figure 2 | Dark mode (Book a Court page) | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_02_Dark_mode_Book_a_Court_page.png
+Figure 3 | Book a Court page | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_03_Book_a_Court_page.png
+Figure 4 | Reschedule Booking page | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_04_Reschedule_Booking_page.png
+Figure 5 | Cancel a Booking page | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_05_Cancel_a_Booking_page.png
+Figure 6 | View All Bookings page | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/A4_System_pages/Fig_06_View_All_Bookings_page.png
+Figure 7 | Register page | Teoh Zynn | 2_Teoh_Zynn_Membership/A4_System_pages/Fig_07_Register_page.png
+Figure 8 | Manage Members page | Teoh Zynn | 2_Teoh_Zynn_Membership/A4_System_pages/Fig_08_Manage_Members_page.png
+Figure 8a | Update a member (saved pop-up) | Teoh Zynn | 2_Teoh_Zynn_Membership/A4_System_pages/Fig_08a_Update_a_member_saved_pop_up.png
+Figure 8b | Delete a member (confirmation pop-up) | Teoh Zynn | 2_Teoh_Zynn_Membership/A4_System_pages/Fig_08b_Delete_a_member_confirmation_pop_up.png
+Figure 9 | Renew Membership page | Teoh Zynn | 2_Teoh_Zynn_Membership/A4_System_pages/Fig_09_Renew_Membership_page.png
+Figure 10 | Manage Coaches page | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_10_Manage_Coaches_page.png
+Figure 10a | Add a coach (saved pop-up) | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_10a_Add_a_coach_saved_pop_up.png
+Figure 10b | Update a coach | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_10b_Update_a_coach.png
+Figure 10c | Delete a coach (confirmation pop-up) | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_10c_Delete_a_coach_confirmation_pop_up.png
+Figure 11 | Manage Classes page | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_11_Manage_Classes_page.png
+Figure 11a | Schedule a class (saved pop-up) | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_11a_Schedule_a_class_saved_pop_up.png
+Figure 11b | Update a class | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_11b_Update_a_class.png
+Figure 11c | Delete a class (confirmation pop-up) | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_11c_Delete_a_class_confirmation_pop_up.png
+Figure 12 | Enrol Member page | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_12_Enrol_Member_page.png
+Figure 13 | Remove Member page | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_13_Remove_Member_page.png
+Figure 14 | Hours & Commission page | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/A4_System_pages/Fig_14_Hours_Commission_page.png
+Figure 15 | Create Bill page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_15_Create_Bill_page.png
+Figure 16 | Pay Bill page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_16_Pay_Bill_page.png
+Figure 17 | Void Bill page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_17_Void_Bill_page.png
+Figure 18 | Delete Bill page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_18_Delete_Bill_page.png
+Figure 19 | View Receipt page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_19_View_Receipt_page.png
+Figure 20 | Daily Revenue page | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/A4_System_pages/Fig_20_Daily_Revenue_page.png
+Figure 54 | The program after starting | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_54_The_program_after_starting.png
+Figure 55 | Action menu of the Booking tab | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_55_Action_menu_of_the_Booking_tab.png
+Figure 56 | Book a Court | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_56_Book_a_Court.png
+Figure 57 | Reschedule a Booking | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_57_Reschedule_a_Booking.png
+Figure 58 | Cancel a Booking | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_58_Cancel_a_Booking.png
+Figure 59 | View All Bookings | Teh Tze Ken | 1_Teh_Tze_Ken_Booking_and_Home/C3_User_manual_with_arrows/Fig_59_View_All_Bookings.png
+Figure 60 | Action menu of the Membership tab | Teoh Zynn | 2_Teoh_Zynn_Membership/C3_User_manual_with_arrows/Fig_60_Action_menu_of_the_Membership_tab.png
+Figure 61 | Register a Member | Teoh Zynn | 2_Teoh_Zynn_Membership/C3_User_manual_with_arrows/Fig_61_Register_a_Member.png
+Figure 62 | Manage Members | Teoh Zynn | 2_Teoh_Zynn_Membership/C3_User_manual_with_arrows/Fig_62_Manage_Members.png
+Figure 63 | Renew Membership | Teoh Zynn | 2_Teoh_Zynn_Membership/C3_User_manual_with_arrows/Fig_63_Renew_Membership.png
+Figure 64 | Action menu of the Coaching tab | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_64_Action_menu_of_the_Coaching_tab.png
+Figure 65 | Manage Coaches | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_65_Manage_Coaches.png
+Figure 66 | Manage Classes | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_66_Manage_Classes.png
+Figure 67 | Enrol Member | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_67_Enrol_Member.png
+Figure 68 | Remove Member | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_68_Remove_Member.png
+Figure 69 | Hours & Commission | Tan Chor Koon | 3_Tan_Chor_Koon_Coaching/C3_User_manual_with_arrows/Fig_69_Hours_Commission.png
+Figure 70 | Action menu of the Billing tab | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_70_Action_menu_of_the_Billing_tab.png
+Figure 71 | Create a Bill | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_71_Create_a_Bill.png
+Figure 72 | Pay a Bill | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_72_Pay_a_Bill.png
+Figure 73 | Void a Bill | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_73_Void_a_Bill.png
+Figure 74 | View a Receipt | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_74_View_a_Receipt.png
+Figure 75 | Daily Revenue | Low Yee Zhe | 4_Low_Yee_Zhe_Billing/C3_User_manual_with_arrows/Fig_75_Daily_Revenue.png

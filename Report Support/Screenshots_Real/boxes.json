@@ -1,0 +1,260 @@
+{
+ "Figure_55.png": {
+  "x": 277,
+  "y": 172,
+  "w": 204,
+  "h": 44
+ },
+ "Figure_56.png": {
+  "x": 908,
+  "y": 551,
+  "w": 61,
+  "h": 34
+ },
+ "Figure_57.png": {
+  "x": 679,
+  "y": 471,
+  "w": 99,
+  "h": 34
+ },
+ "Figure_58.png": {
+  "x": 679,
+  "y": 429,
+  "w": 125,
+  "h": 34
+ },
+ "Figure_59.png": {
+  "x": 278,
+  "y": 135,
+  "w": 70,
+  "h": 34
+ },
+ "Figure_60.png": {
+  "x": 286,
+  "y": 172,
+  "w": 204,
+  "h": 44
+ },
+ "Figure_61.png": {
+  "x": 904,
+  "y": 522,
+  "w": 80,
+  "h": 34
+ },
+ "Figure_62.png": {
+  "x": 752,
+  "y": 329,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_63.png": {
+  "x": 697,
+  "y": 286,
+  "w": 70,
+  "h": 34
+ },
+ "Figure_64.png": {
+  "x": 174,
+  "y": 172,
+  "w": 204,
+  "h": 44
+ },
+ "Figure_65.png": {
+  "x": 645,
+  "y": 403,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_66.png": {
+  "x": 629,
+  "y": 452,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_67.png": {
+  "x": 697,
+  "y": 375,
+  "w": 62,
+  "h": 34
+ },
+ "Figure_68.png": {
+  "x": 697,
+  "y": 376,
+  "w": 79,
+  "h": 34
+ },
+ "Figure_69.png": {
+  "x": 423,
+  "y": 152,
+  "w": 70,
+  "h": 34
+ },
+ "Figure_70.png": {
+  "x": 174,
+  "y": 172,
+  "w": 204,
+  "h": 44
+ },
+ "Figure_71.png": {
+  "x": 31,
+  "y": 320,
+  "w": 93,
+  "h": 34
+ },
+ "Figure_72.png": {
+  "x": 635,
+  "y": 392,
+  "w": 52,
+  "h": 34
+ },
+ "Figure_73.png": {
+  "x": 697,
+  "y": 316,
+  "w": 83,
+  "h": 34
+ },
+ "Figure_74.png": {
+  "x": 697,
+  "y": 316,
+  "w": 109,
+  "h": 34
+ },
+ "Figure_75.png": {
+  "x": 202,
+  "y": 135,
+  "w": 63,
+  "h": 34
+ },
+ "Figure_08a_update_member.png": {
+  "x": 752,
+  "y": 329,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_08b_delete_member_confirm.png": {
+  "x": 662,
+  "y": 303,
+  "w": 54,
+  "h": 22
+ },
+ "Figure_08b2_delete_member_done.png": {
+  "x": 662,
+  "y": 303,
+  "w": 54,
+  "h": 22
+ },
+ "Figure_10a_add_coach.png": {
+  "x": 645,
+  "y": 403,
+  "w": 96,
+  "h": 34
+ },
+ "Figure_10b_update_coach.png": {
+  "x": 645,
+  "y": 403,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_10c_delete_coach_confirm.png": {
+  "x": 542,
+  "y": 268,
+  "w": 54,
+  "h": 22
+ },
+ "Figure_11a_schedule_class.png": {
+  "x": 629,
+  "y": 452,
+  "w": 120,
+  "h": 34
+ },
+ "Figure_11b_update_class.png": {
+  "x": 629,
+  "y": 452,
+  "w": 114,
+  "h": 34
+ },
+ "Figure_11c_delete_class_confirm.png": {
+  "x": 526,
+  "y": 242,
+  "w": 54,
+  "h": 22
+ },
+ "Popup_success_booking_made.png": {
+  "x": 908,
+  "y": 551,
+  "w": 61,
+  "h": 34
+ },
+ "Popup_confirm_cancel_booking.png": {
+  "x": 679,
+  "y": 429,
+  "w": 125,
+  "h": 34
+ },
+ "Popup_success_booking_part_cancelled.png": {
+  "x": 679,
+  "y": 429,
+  "w": 125,
+  "h": 34
+ },
+ "Popup_success_booking_cancelled.png": {
+  "x": 679,
+  "y": 429,
+  "w": 125,
+  "h": 34
+ },
+ "Popup_success_member_registered.png": {
+  "x": 904,
+  "y": 522,
+  "w": 80,
+  "h": 34
+ },
+ "Popup_success_bill_paid.png": {
+  "x": 635,
+  "y": 392,
+  "w": 52,
+  "h": 34
+ },
+ "Popup_success_receipt_shown.png": {
+  "x": 697,
+  "y": 316,
+  "w": 109,
+  "h": 34
+ },
+ "Popup_confirm_remove_member.png": {
+  "x": 697,
+  "y": 376,
+  "w": 79,
+  "h": 34
+ },
+ "Popup_error_member_delete_blocked.png": {
+  "x": 662,
+  "y": 225,
+  "w": 54,
+  "h": 22
+ },
+ "Popup_error_cancel_blocked_bill.png": {
+  "x": 656,
+  "y": 429,
+  "w": 125,
+  "h": 34
+ },
+ "Popup_error_class_full.png": {
+  "x": 697,
+  "y": 375,
+  "w": 62,
+  "h": 34
+ },
+ "Popup_error_coach_double_booked.png": {
+  "x": 629,
+  "y": 452,
+  "w": 120,
+  "h": 34
+ },
+ "Popup_error_booking_in_past.png": {
+  "x": 679,
+  "y": 471,
+  "w": 99,
+  "h": 34
+ }
+}
