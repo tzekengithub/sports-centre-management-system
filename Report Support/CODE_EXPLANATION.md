@@ -131,6 +131,7 @@ Logic:
 - `search_members(member_list, field, text)` - `match` on id/name/type.
 - `has_future_confirmed_booking` / `has_unpaid_bill` - checked before delete.
 - `update_member` / `renew_member` / `delete_member`.
+- Force delete: `force_delete_plan(member_id)` works out (without changing anything) the unpaid bills to void, upcoming bookings to cancel, upcoming classes to leave, and anything `stuck`; `force_delete_member` does it in that order and then calls `delete_member`; `delete_action` asks the Yes/No question first. The coach version is `coaching.force_delete_coach_plan` / `force_delete_coach`.
 - `count_members_by_type` (dict), `members_expiring_within`,
   `count_members_recursive` (recursion) - shown in the Members summary line.
 

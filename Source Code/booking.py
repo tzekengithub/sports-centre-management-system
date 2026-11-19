@@ -8,6 +8,17 @@ Purpose     : Facility & Court Booking module - a visual grid of court
 Date        : 2026-11-07
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 CLASS ............ Booking (one booking: member, sport, court, date, start hour, length, status)
+#   2 LOGIC (no screens) saving/loading bookings.txt, the RULES that allow or block an action
+#                        (has_clash, check_booking_time, cancel_booking, reschedule_booking ...), search,
+#                        the day sheet
+#   3 SCREEN (tkinter) . BOOKING_ACTIONS menu, then one build_..._page function per page:
+#                        Book a Court, Cancel, Reschedule, View All
+#   4 ENTRY POINT ...... build_booking_tab(parent) is called by main.py
+# bookings.txt line:  id|member id|sport|court|date|start hour|hours|status   (status CONFIRMED/CANCELLED)
+# Tip: a CHANGE HERE IF line above a function says when you would edit it.
+
 import datetime
 import os
 import tkinter as tk
@@ -128,6 +139,7 @@ class Booking(common.Record):
 # ---------------------------------------------------------------------------
 # LOGIC LAYER
 # ---------------------------------------------------------------------------
+# ===== SAVING: reading bookings.txt (a line with the wrong number of fields is skipped) =====
 BOOKING_FIELD_COUNT = 8
 
 
@@ -195,6 +207,8 @@ def members_valid_on(date_text):
     return valid_members
 
 
+# ===== RULES: checks that stop a bad booking =====
+# CHANGE HERE IF: you change who may book (now: the member must exist and be valid on that date).
 def check_member_can_book(member_id, date_text):
     """Raise ValueError if member_id doesn't exist or their membership
     ends before date_text (an expired member can't book)."""
@@ -206,6 +220,8 @@ def check_member_can_book(member_id, date_text):
                          "Renew it in Membership first.")
 
 
+# CHANGE HERE IF: you change what counts as 'already started'. A started booking can't be cancelled
+# or moved (see cancel_booking and reschedule_booking).
 def booking_has_started(booking):
     """Return True if the booking's first hour has begun (or its date has
     passed). Started bookings are history: they can't be changed."""
@@ -218,6 +234,8 @@ def booking_has_started(booking):
 BILL_FIELD_COUNT = 10
 
 
+# CHANGE HERE IF: you change how a bill affects a booking. This finds the bill that charges for a
+# booking; cancel_booking, cancel_booking_hours and reschedule_booking refuse when one exists.
 def booking_bill_info(booking_id):
     """Return (bill_id, status) of a bill (not VOID) charging for this
     booking, or None. Read straight from bills.txt (booking doesn't import
@@ -239,6 +257,7 @@ def booking_bill_id(booking_id):
     return bill_info[0]
 
 
+# CHANGE HERE IF: you change the message shown when a bill stops a cancel or reschedule.
 def bill_blocks_text(bill_info):
     """Words for why a billed booking can't change. A PAID bill can never be
     voided (billing refuses), so the booking then stays as it is."""
@@ -247,6 +266,8 @@ def bill_blocks_text(bill_info):
     return f"Bill {bill_info[0]} charges for this booking. Void the bill in Billing first."
 
 
+# CHANGE HERE IF: you change what counts as a double booking (same sport, court, date and an
+# overlapping hour; only CONFIRMED bookings count).
 def has_clash(booking_list, sport, court_no, date_text, start_hour, duration_hrs, ignore_id=None):
     """Return True if an existing CONFIRMED booking overlaps this slot
     (ignore_id skips the booking being rescheduled).
@@ -313,6 +334,9 @@ def find_next_free_hour(grid, hour_list, court_index):
     return None
 
 
+# ===== MAKING BOOKINGS =====
+# CHANGE HERE IF: you change the checks done before a booking is saved (time check, member check,
+# clash message 'This court is already booked for the selected time.').
 def create_booking(member_id, sport, court_no, date_text, start_hour, duration_hrs):
     """Validate and create a new booking. Raises ValueError on invalid input or clash."""
     date_text = check_booking_time(date_text, start_hour)
@@ -366,6 +390,8 @@ def create_bookings(member_id, sport, date_text, picked_cells):
     return new_bookings
 
 
+# CHANGE HERE IF: you change the date/time rule (no past dates, and a start hour that has already
+# begun today is refused). The error messages are right below.
 def check_booking_time(date_text, start_hour):
     """Check a booking date and start hour are real and not in the past.
     Returns the date in standard YYYY-MM-DD form; raises ValueError."""
@@ -380,6 +406,7 @@ def check_booking_time(date_text, start_hour):
     return date_text
 
 
+# CHANGE HERE IF: you add a search field (also edit search_bookings and search_any_field below).
 SEARCH_FIELDS = ("id", "member", "date", "sport", "status")
 
 
@@ -426,6 +453,9 @@ def search_any_field(booking_list, search_text, member_names):
     return results
 
 
+# ===== CANCELLING AND MOVING A BOOKING =====
+# CHANGE HERE IF: you change the rule for cancelling a booking. It refuses when the booking is
+# already cancelled, has started, or has a bill (booking_bill_info). Remove a check to allow it.
 def cancel_booking(booking_id):
     """Set a booking's status to CANCELLED. Blocked if it is already
     CANCELLED (clicking Cancel twice gives a clear message), if it has
@@ -452,6 +482,8 @@ def cancel_booking(booking_id):
     common.rewrite_records(common.BOOKINGS_FILE, updated_lines, line_to_booking)
 
 
+# CHANGE HERE IF: you change cancelling only SOME hours. It repeats the same three rules as
+# cancel_booking, so change both together.
 def cancel_booking_hours(booking_id, first_hour, end_hour):
     """Cancel only the hours first_hour..end_hour-1 of a booking. The picked
     hours stay on record under the original ID as CANCELLED, and any hours
@@ -505,6 +537,8 @@ def cancel_booking_hours(booking_id, first_hour, end_hour):
     return new_bookings
 
 
+# CHANGE HERE IF: you change the rule for moving a booking (same sport and length, not started,
+# no bill, no clash, member valid on the new date).
 def reschedule_booking(booking_id, new_date_text, new_start_hour, new_court_no):
     """Move a CONFIRMED booking that hasn't started to another date, start
     hour and/or court of the same sport. The length stays the same, so
@@ -551,6 +585,7 @@ def find_booking_by_id(booking_list, booking_id):
     return None
 
 
+# ===== DAY SHEET: the printable list saved by the 'Save Day Sheet' button =====
 DAY_SHEET_FOLDER = os.path.join(common.DATA_FOLDER, "day_sheets")
 
 
@@ -685,6 +720,9 @@ def find_booking_at(booking_list, sport, court_no, date_text, hour):
 #   View All Bookings  - every booking, confirmed and cancelled, with search
 # Bookings are never deleted: a cancelled one stays on record as CANCELLED.
 # ---------------------------------------------------------------------------
+# ===== SCREEN: everything below builds the Booking tab's pages =====
+# CHANGE HERE IF: you add or rename a button on the Booking menu. Each entry is (button name, hint
+# under it, instructions at the top of its page); the page itself is built further down.
 BOOKING_ACTIONS = [
     ("Book a Court", "See free courts and book one",
      "Pick a date and a sport. Click the free (green) hours you want, on any courts - "
@@ -710,11 +748,14 @@ SEARCH_LABEL = "Member / ID / date"
 MEMBER_MENU_WIDTH = 24
 
 
+# SCREEN: shows an error message box (used by every handler below).
 def show_problem(error):
     """Show a ValueError's plain message in a standard error box."""
     messagebox.showerror("Please check", str(error))
 
 
+# ===== SCREEN: the Booking tab entry point (called by main.py) =====
+# It makes the action menu and connects each menu button to its page builder below.
 def build_booking_tab(parent):
     """Build the Facility & Court Booking tab inside parent (the main
     window's tab area) and return its frame. The tab opens on a menu
@@ -728,6 +769,7 @@ def build_booking_tab(parent):
     return window
 
 
+# ----- what each list row and the details panel show on the Cancel / Reschedule / View All pages -----
 def booking_rows(search_text, upcoming_only):
     """Return (booking_id, row_text, colour_kind) for the list pages, soonest
     first. The colour kind is 'bad' (red) for CANCELLED, 'quiet' (grey) for a
@@ -824,6 +866,7 @@ def describe_booking(booking_id):
     ])
 
 
+# ===== SCREEN: Cancel a Booking page =====
 def build_cancel_page(page_frame):
     """Build the Cancel a Booking page and return its refresh function.
     Cancelled bookings are kept on record (status CANCELLED), never
@@ -914,6 +957,7 @@ def build_cancel_page(page_frame):
                                              "change them). Cancelled hours stay on record as CANCELLED.")
 
 
+# ===== SCREEN: View All Bookings page =====
 def build_view_all_page(page_frame):
     """Build the View All Bookings page (view only): every booking,
     including cancelled and past ones, with a search box."""
@@ -941,6 +985,7 @@ def hour_choice_text(hour):
     return f"{hour:02d}:00"
 
 
+# ===== SCREEN: Reschedule Booking page =====
 def build_reschedule_page(page_frame):
     """Build the Reschedule Booking page and return its refresh function."""
     form_widgets = {}
@@ -1028,6 +1073,7 @@ def upcoming_rows(search_text):
     return booking_rows(search_text, True)
 
 
+# ===== SCREEN: Book a Court page (the courts-by-hours grid, member box and Book button) =====
 def build_book_page(section_frame, page_hooks):
     """Build the Book a Court page: date + sport pickers, the
     courts-by-hours grid, and the member picker with a Book button."""

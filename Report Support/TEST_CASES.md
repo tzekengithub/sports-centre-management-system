@@ -419,6 +419,25 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
 
 
+## Force delete of members and coaches (Entry 33)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| FD-01 | Plan changes nothing | `force_delete_plan("MEM002")` | void BIL002, cancel BKG002, leave CLS002, nothing stuck; files unchanged | Exactly so | PASS |
+| FD-02 | Force delete a member | `force_delete_member("MEM002")` | Member gone; BIL002 VOID and BKG002 CANCELLED (kept); CLS002 kept without them; paid BIL001 untouched; message "Also done first" lists all three | Exactly so | PASS |
+| FD-03 | Demo path | `force_delete_member("MEM003")` | BIL003 VOID, BKG004 CANCELLED, out of CLS001 (MEM001 stays) | Exactly so | PASS |
+| FD-04 | Stuck by a PAID bill | `force_delete_member("MEM001")` | Refused ("...BIL001, which is paid..."); NOTHING in any file changed | Exactly so | PASS |
+| FD-05 | Stuck by a started booking | booking today at the current hour | Plan says "already started"; stuck | Exactly so | PASS |
+| FD-06 | Nothing to clear / unknown | MEM005; MEM999 | Empty plan; "No member found" | Exactly so | PASS |
+| FD-07 | Force delete a coach | `force_delete_coach("CCH002")` | CLS002 deleted, BIL002 VOID, coach removed, message lists both | Exactly so | PASS |
+| FD-08 | Coach with past classes | CCH001 + a past class | Upcoming class deleted; coach kept INACTIVE | Exactly so | PASS |
+| FD-09 | Coach stuck by a PAID class bill | extra PAID bill on CLS001 | Refused naming the bill; nothing changed | Exactly so | PASS |
+| FD-10 | Window: member, answer No | Delete MEM002, Yes then No | Two questions ("Delete", "Force delete"); the force one lists BIL002, BKG002, CLS002; nothing changes, no message | Exactly so | PASS |
+| FD-11 | Window: member, answer Yes | Delete MEM002, Yes then Yes | Row disappears; message "Member MEM002 deleted. Also done first: ..." | Exactly so | PASS |
+| FD-12 | Window: stuck member | Delete MEM001 | One question, then error "Force delete is not possible: ... BIL001 ..."; member still listed | Exactly so | PASS |
+| FD-13 | Window: normal delete unchanged | Delete MEM005 / CCH003 | One question, plain "deleted" message, no force prompt | Exactly so | PASS |
+| FD-14 | Window: coach, No then Yes | Delete CCH002 | Force question lists CLS002 and BIL002; No changes nothing; Yes removes the coach and shows the clean-up | Exactly so | PASS |
+
 ## Membership fee billed once per period (Entry 32)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

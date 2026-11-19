@@ -7,6 +7,20 @@ Purpose     : Shared constants, file helpers, ID generator, validators,
 Date        : 2026-11-05
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 PATHS ............ where the data files and folders are
+#   2 SETTINGS ......... sports, courts, prices, membership types / fees / discounts / duration,
+#                        opening hours, payment methods, bill categories   <- most live changes
+#   3 SCREEN STYLE ..... colours, fonts, window size, dark mode
+#   4 SHARED SCREEN PARTS buttons, entry boxes, drop-downs, tooltips, the pick page and manage page
+#                        that every module uses
+#   5 NUMBER INPUT ..... friendly "please type a number" checks
+#   6 SAVING ........... read/write the .txt files and make IDs (MEM001, BKG001 ...)
+#   7 VALIDATORS ....... name, phone, date and hour rules
+#   8 SAMPLE DATA ...... the demo rows made when the data/ folder is empty
+#   9 BASE CLASSES ..... Record (Booking, Class) and Person (Member, Coach) parents
+# Tip: a CHANGE HERE IF line above a setting or function says when you would edit it.
+
 import os
 import tkinter as tk
 from tkinter import messagebox
@@ -46,6 +60,9 @@ RECURSION_SAFE_LIMIT = 500
 # ---------------------------------------------------------------------------
 # DOMAIN CONSTANTS
 # ---------------------------------------------------------------------------
+# ===== SETTINGS: change prices, limits and lists here =====
+# CHANGE HERE IF: you add a sport, change a court price (rate = RM per hour) or change how many
+# courts a sport has. If coaches may teach the new sport, also add it to COACHING_SPORTS below.
 SPORTS = {
     "Badminton": {"courts": 4, "rate": 20.0},
     "Futsal": {"courts": 2, "rate": 80.0},
@@ -53,8 +70,13 @@ SPORTS = {
     "Squash": {"courts": 2, "rate": 25.0},
 }
 
+# CHANGE HERE IF: you add or rename a membership type. A new type ALSO needs an entry in
+# MEMBERSHIP_DURATION_DAYS, MEMBERSHIP_FEES and MEMBER_DISCOUNT_PCT below (and, if you want a
+# picture on the Register page, a file images/card_<type>.png; without it a text card is shown).
 MEMBERSHIP_TYPES = ("Annual", "Monthly", "Pay-As-You-Go", "VIP", "Youth", "Senior", "Family")
 
+# CHANGE HERE IF: you change how long a membership lasts (in days). Register and Renew both use this,
+# and so does the 'fee already billed this period' check in billing.py.
 # How many days one membership period lasts (used by Register, Renew and by
 # Billing, which works out whether the current period's fee is already billed).
 MEMBERSHIP_DURATION_DAYS = {
@@ -62,6 +84,7 @@ MEMBERSHIP_DURATION_DAYS = {
     "VIP": 365, "Youth": 180, "Senior": 365, "Family": 365,
 }
 
+# CHANGE HERE IF: you change what a membership costs (RM). Pay-As-You-Go is 0.0 = nothing to bill.
 MEMBERSHIP_FEES = {
     "Annual": 600.0,
     "Monthly": 60.0,
@@ -72,6 +95,7 @@ MEMBERSHIP_FEES = {
     "Family": 900.0,
 }
 
+# CHANGE HERE IF: you change the member discount (percent taken off every bill, by membership type).
 MEMBER_DISCOUNT_PCT = {
     "Annual": 10.0,
     "Monthly": 5.0,
@@ -82,11 +106,14 @@ MEMBER_DISCOUNT_PCT = {
     "Family": 12.0,
 }
 
+# CHANGE HERE IF: coaches may teach a new sport (this list only fills the Sport drop-down for coaches).
 # Coaches can teach the court sports above plus non-court activities
 # (swimming lessons, yoga classes). Classes do not book a court, so these
 # extra sports need no court count or rate.
 COACHING_SPORTS = ("Badminton", "Futsal", "Tennis", "Squash", "Swimming", "Yoga")
 
+# CHANGE HERE IF: you want different on-screen names for the bill categories. A completely NEW
+# category needs more: BILL_CATEGORIES below and generate_bill() in billing.py.
 # Friendly names for the four bill categories, used on screen.
 BILL_CATEGORY_NAMES = {
     "COURT": "Court Rental",
@@ -95,12 +122,18 @@ BILL_CATEGORY_NAMES = {
     "MEMBERSHIP": "Membership Fees",
 }
 
+# CHANGE HERE IF: opening or closing time changes. 24-hour clock: 8 = 08:00, 22 = 22:00. The last
+# bookable hour is CLOSING_HOUR - 1 (21:00 to 22:00). The Booking grid and class limits follow these.
 OPENING_HOUR = 8
 CLOSING_HOUR = 22
 
+# CHANGE HERE IF: you add a payment method. Also change the radio buttons in billing.py
+# build_pay_page (search for 'E-Wallet'), METHOD_TIPS in billing.py, and the error text in pay_bill().
 VALID_PAYMENT_METHODS = {"Cash", "Card", "E-Wallet"}
 
 BOOKING_STATUSES = ("CONFIRMED", "CANCELLED")
+# CHANGE HERE IF: you add a bill category (also needs generate_bill() and the category radio buttons
+# CATEGORY_CHOICES in billing.py, and a line in BILL_CATEGORY_NAMES above).
 BILL_CATEGORIES = ("COURT", "COACHING", "MEMBERSHIP", "RETAIL")
 BILL_STATUSES = ("UNPAID", "PAID", "VOID")
 
@@ -176,6 +209,8 @@ TOOLTIP_DELAY_MS = 450
 TOOLTIP_BG = "#fff8dc"
 
 
+# ===== SCREEN STYLE: colours, fonts and dark mode =====
+# (colours are the names near the top of this section, e.g. BUTTON_COLOR; dark mode swaps them)
 def apply_theme(theme_name):
     """Switch every shared colour to the 'light' or 'dark' palette in
     THEMES. Widgets built afterwards use the new colours."""
@@ -413,6 +448,8 @@ def rezoom_records(root_window):
             widget.config(font=record_font())
 
 
+# ===== SHARED SCREEN PARTS: buttons, entry boxes, drop-downs, hover hints =====
+# Every module builds its screens from these, so a change here changes every page.
 def add_tooltip(widget, tip_text):
     """Show a small yellow hint box explaining how to use widget when the
     mouse rests on it for a moment; it disappears when the mouse leaves
@@ -549,6 +586,7 @@ def set_option_menu_choices(menu, variable, choices, command=None, placeholder=N
 CHOOSE_TEXT = "(choose one)"
 
 
+# SCREEN: the search-as-you-type member/coach drop-down (type to search, or click the arrow).
 def make_filtered_menu(parent, variable, width=24, tip=None, command=None, stacked=False):
     """A search-as-you-type drop-down (a combo box built from an Entry, a
     small arrow button and a pop-up list). Click the box and type part of
@@ -810,6 +848,9 @@ def wrap_to_width(event):
         event.widget.config(wraplength=event.width - 4)
 
 
+# ===== PAGE BUILDERS: the action menu, the 'pick from a list' page and the 'manage' page =====
+# Each tab opens on a menu (build_action_menu); each page is made by build_pick_page
+# (list on the left, details + ONE button on the right) or build_manage_page (add/update/delete).
 def build_action_menu(window, title_text, action_list):
     """Build the standard tab layout: a "What would you like to do?" menu
     with one big button per action, and one page per action.
@@ -1221,6 +1262,9 @@ def build_manage_page(page_frame, list_header, load_rows, item_name, build_form,
         except (ValueError, OSError) as error:
             messagebox.showerror("Please check", str(error))
             return
+        if message is None:
+            # delete_action asked a follow-up question (force delete) and the user said No.
+            return
         messagebox.showinfo("Deleted", message)
         if page_state["editing_id"] == record_id:
             start_new()
@@ -1326,6 +1370,7 @@ def selected_index(listbox):
 # ---------------------------------------------------------------------------
 # NUMBER INPUT (friendly messages instead of Python's own error text)
 # ---------------------------------------------------------------------------
+# CHANGE HERE IF: you change the wording of the 'please enter a valid number' messages.
 def parse_decimal(text, field_name, minimum, maximum):
     """Turn typed text into a number between minimum and maximum.
     Raises ValueError with a plain message for words, empty input,
@@ -1620,6 +1665,8 @@ def write_sample_receipts(bill_lines):
         write_lines(os.path.join(RECEIPT_FOLDER, fields[0] + ".txt"), receipt_lines)
 
 
+# ===== SAVING: read/write the text files (every module calls these) =====
+# read_lines -> write_lines / append_line / rewrite_records. Each record is one line, fields split by |.
 def read_lines(file_path):
     """Read a text file and return a list of stripped, non-empty lines.
     Missing files are treated as empty (auto-recreated by ensure_data_files_exist)."""
@@ -1636,6 +1683,18 @@ def read_lines(file_path):
                 lines.append(stripped_line)
         file_handle.close()
     return lines
+
+
+def read_fields(file_path, field_count):
+    """Return the readable lines of a data file as lists of fields (a line with
+    the wrong number of fields is skipped). Used by the force-delete code in
+    membership.py and coaching.py to look at other modules' files."""
+    rows = []
+    for line in read_lines(file_path):
+        fields = split_fields(line, field_count)
+        if fields is not None:
+            rows.append(fields)
+    return rows
 
 
 def file_error_message(file_path, error):
@@ -1764,6 +1823,8 @@ def contains_forbidden_character(text):
     return "|" in text or ";" in text
 
 
+# CHANGE HERE IF: you change how IDs look. They are PREFIX + 3 digits (MEM001, BKG001, CCH001,
+# CLS001, BIL001); the next number is one more than the highest ever used.
 def generate_id(file_path, prefix):
     """Generate the next ID (e.g. MEM005) for a data file: one more than the
     highest number in the file OR the highest ever used (id_counters.txt),
@@ -1789,6 +1850,8 @@ def generate_id(file_path, prefix):
 # ---------------------------------------------------------------------------
 # Besides letters and spaces, names may contain "/" (a/l, s/o, d/o) and
 # an apostrophe (Ch'ng, O'Neil). Neither can corrupt the "|" file format.
+# CHANGE HERE IF: you change which characters a name may contain or its maximum length.
+# Also edit NAME_RULE_MESSAGE (the error text) below.
 NAME_EXTRA_CHARACTERS = {" ", "/", "'"}
 MAX_NAME_LENGTH = 40
 NAME_RULE_MESSAGE = ("Name can only contain letters, spaces, / and ' "
@@ -1827,6 +1890,8 @@ def format_name(name_text):
     return " ".join(tidy_words)
 
 
+# CHANGE HERE IF: you change the phone number rule. The error text 'Phone must be 10-11 digits and
+# start with 01.' is in Person.set_phone() at the bottom of this file.
 def is_valid_phone(phone_text):
     """Return True for a Malaysian-style phone: digits only, 10-11 digits,
     starting with 01."""
@@ -1889,6 +1954,9 @@ def add_days_to_date(date_text, number_of_days):
     return new_date.strftime("%Y-%m-%d")
 
 
+# ===== SAMPLE DATA: the demo members, bookings, coaches, classes and bills =====
+# CHANGE HERE IF: you want different demo data. It is only used when a data file is missing (delete
+# the Source Code/data folder to get it again). Dates are relative to today.
 def build_sample_rows():
     """Build the sample data rows relative to today's date, so bookings and
     classes are always in the future (and member expiry dates always make

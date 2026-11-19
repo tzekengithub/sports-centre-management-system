@@ -10,7 +10,7 @@ Real bug found (case 5): `generate_bill` accepted a CANCELLED booking, creating 
 - No change to delete rules, message texts, file formats or public names.
 
 ## 3. Sample IDs
-- Members: MEM001 (renew, 10 days left), MEM002 (blocked: booking+unpaid bill+class), MEM003, MEM004 (update), **MEM005 Demo Delete** (deletable).
+- Members: MEM001 (renew, 10 days left), MEM002 (blocked: booking+unpaid bill+class; Delete offers the force prompt, answer No), MEM001 (force delete not possible: paid bill BIL001 on BKG001), MEM003, MEM004 (update), **MEM005 Demo Delete** (deletable).
 - Bookings: BKG002 (no bill: reschedule/cancel), BKG004 (UNPAID bill BIL003), BKG001 (PAID bill), BKG003 (cancelled).
 - Coaches: CCH003 never taught, CCH004 past class only, CCH001/CCH002 have upcoming classes.
 - Classes: CLS001 (group, free places, no bill), CLS002 (private, UNPAID BIL002), CLS003 (past).

@@ -9,6 +9,14 @@ Purpose     : Main entry point - checks the Python version, then builds
 Date        : 2026-11-07
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 SETTINGS ......... minimum Python version, tab names, exit question, welcome message
+#   2 HOME HEADER ...... the greeting, clock and shortcut buttons on the Home tab (drawn with Canvas)
+#   3 build_window_contents  the tab bar and switch_to_tab (builds the chosen module's tab)
+#   4 main() ........... the start of the program: checks Python, makes the window, runs it
+# The four modules are built by build_booking_tab / build_membership_tab / build_coaching_tab /
+# build_billing_tab (one in each module file). Nothing in this file needs changing for a new rule.
+
 import sys
 
 # The other modules (booking.py, membership.py, coaching.py, billing.py)
@@ -17,6 +25,8 @@ import sys
 # and exit BEFORE those modules are imported - it deliberately uses no
 # syntax newer than Python 3 here (no "match" in this file), so this file
 # itself always parses.
+# ===== SETTINGS =====
+# CHANGE HERE IF: you need a different minimum Python version.
 MINIMUM_PYTHON_VERSION = (3, 10)
 
 if sys.version_info < MINIMUM_PYTHON_VERSION:
@@ -43,6 +53,8 @@ import coaching
 import billing
 
 # Tab order along the top bar (tuple) and the text shown on each tab (dict).
+# CHANGE HERE IF: you add, rename or reorder a tab. A new tab also needs a branch in switch_to_tab
+# (inside build_window_contents) that builds its module's tab, plus a TAB_LABELS and TAB_TIPS entry.
 TAB_ORDER = ("home", "booking", "membership", "coaching", "billing")
 TAB_LABELS = {
     "home": "Home",
@@ -63,9 +75,11 @@ TAB_TIPS = {
     "billing": "Create bills, take payments, view receipts and daily revenue.",
 }
 
+# CHANGE HERE IF: you change the question asked when someone exits (the Exit tab and the window X).
 EXIT_QUESTION = ("Are you sure you want to exit the Sports Centre Management System?\n\n"
                  "Everything you have saved is kept.")
 
+# CHANGE HERE IF: you change the welcome message shown the first time the program runs.
 WELCOME_MESSAGE = (
     "Welcome! This program manages a sports centre's bookings, members, "
     "coaching classes and billing.\n\n"
@@ -591,6 +605,7 @@ def build_home_header(home_frame, switch_to_tab):
     return header
 
 
+# ===== SCREEN: the Home tab (header, shortcut buttons) =====
 def build_home_tab(parent, switch_to_tab):
     """Build the Home tab (greeting header, title, help button and one big
     button per module) inside parent and return its frame. switch_to_tab(name)
@@ -646,6 +661,9 @@ def theme_tip():
     return "Switch to dark colours, easier on the eyes at night. Your choice is remembered next time."
 
 
+# ===== SCREEN: the tab bar and tab switching =====
+# switch_to_tab (inside this function) destroys the current tab and builds the chosen one, so every
+# tab switch reloads fresh data. Dark mode and zoom are wired here too.
 def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit, on_zoom_in, on_zoom_out):
     """Build the tab bar and content area inside root_window using the
     current theme's colours, and show start_tab. Returns the theme button,
@@ -770,6 +788,8 @@ def build_window_contents(root_window, start_tab, on_theme_toggle, on_exit, on_z
     return theme_button
 
 
+# ===== START OF THE PROGRAM: python main.py runs this =====
+# It makes sure the data files exist, builds the one window and starts the Tk event loop.
 def main():
     """Build the single main window with its tab bar and run it."""
     is_first_run = common.ensure_data_files_exist()

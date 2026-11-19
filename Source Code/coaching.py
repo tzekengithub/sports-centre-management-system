@@ -7,6 +7,19 @@ Purpose     : Coaching & Class Management module - assigns coaches to
 Date        : 2026-11-07
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 SETTINGS ......... limits for coaches and classes (hourly rate, commission, fee, length, group size)
+#   2 CLASS Coach ...... one coach (child of common.Person), with ACTIVE/INACTIVE status
+#   3 LOGIC - COACHES .. saving/loading coaches.txt, register / update / delete coach and its RULES
+#   4 CLASS SportsClass  one class (child of common.Record)
+#   5 LOGIC - CLASSES .. schedule / update / delete class, enrol / remove member, commission, the RULES
+#   6 SCREEN (tkinter) . COACHING_ACTIONS menu, then one build_..._page per page:
+#                        Manage Coaches, Manage Classes, Enrol Member, Remove Member, Hours & Commission
+#   7 ENTRY POINT ...... build_coaching_tab(parent) is called by main.py
+# coaches.txt: id|name|phone|sport|hourly rate|commission %|status
+# classes.txt: id|coach id|sport|type|date|start hour|hours|max people|fee per person|member ids split by ;
+# Tip: a CHANGE HERE IF line above a function says when you would edit it.
+
 import datetime
 import tkinter as tk
 from tkinter import messagebox
@@ -15,6 +28,9 @@ import common
 
 
 # Limits used to reject silly or dangerous input (e.g. "inf" or 99999).
+# ===== SETTINGS: limits for coaches and classes =====
+# CHANGE HERE IF: you change the hourly rate, commission, class fee, class length or group size limits.
+# The error messages use these numbers, so they change with them.
 MIN_HOURLY_RATE = 1.0
 MAX_HOURLY_RATE = 500.0
 MAX_COMMISSION_PCT = 100.0
@@ -107,6 +123,7 @@ class Coach(common.Person):
 # ---------------------------------------------------------------------------
 # LOGIC LAYER - COACHES
 # ---------------------------------------------------------------------------
+# ===== SAVING: reading coaches.txt and classes.txt (bad lines are skipped, never lost) =====
 COACH_FIELD_COUNT = 7
 CLASS_FIELD_COUNT = 10
 MEMBER_FIELD_COUNT = 6
@@ -151,6 +168,7 @@ def find_coach_by_id(coach_list, coach_id):
     return None
 
 
+# CHANGE HERE IF: you change the rule that every coach needs a different phone number.
 def coach_phone_in_use(phone, ignore_coach_id=None):
     """Return the ID of the coach already using phone (ignoring
     ignore_coach_id, the coach being edited), or None if it is free."""
@@ -160,6 +178,7 @@ def coach_phone_in_use(phone, ignore_coach_id=None):
     return None
 
 
+# CHANGE HERE IF: you change the checks when a coach is added (rate and commission limits, phone).
 def register_coach(name, phone, sport, hourly_rate, commission_pct):
     """Validate input, build a new Coach, append it to the file, return it.
     A phone number can only belong to one coach."""
@@ -190,6 +209,8 @@ def search_coaches(coach_list, search_field, search_text):
     return results
 
 
+# CHANGE HERE IF: you change what may be edited on a coach (changing the sport also moves their
+# upcoming classes to the new sport).
 def update_coach(coach_id, new_name, new_phone, new_sport, new_rate, new_commission, new_status="ACTIVE"):
     """Update an existing coach's details. If the sport changes, the
     coach's classes that haven't started yet are moved to the new sport
@@ -299,6 +320,8 @@ def upcoming_classes_for_coach(coach_id):
     return upcoming
 
 
+# CHANGE HERE IF: you change what deleting a coach does. Now: no classes = removed; upcoming classes
+# = refused (the message lists them); only past classes = made INACTIVE so history stays.
 def delete_coach(coach_id):
     """Remove a coach and return a message saying what happened:
       - with upcoming classes: refused (those classes need a coach);
@@ -491,6 +514,8 @@ def find_class_by_id(class_list, class_id):
     return None
 
 
+# CHANGE HERE IF: you add a class type (also edit validate_class_details and the type radio buttons
+# on the Manage Classes page).
 CLASS_TYPES = ("Private", "Group")
 
 
@@ -500,6 +525,8 @@ def times_overlap(start_hour, duration_hrs, other_start_hour, other_duration_hrs
     return start_hour < other_start_hour + other_duration_hrs and other_start_hour < start_hour + duration_hrs
 
 
+# CHANGE HERE IF: you change when a class counts as started or over. A started class is kept as a
+# record: it can't be edited, deleted, or have members added or removed.
 def class_has_started(sports_class):
     """Return True if the class's start time has been reached (any past
     day, or today at or after its start hour)."""
@@ -517,6 +544,7 @@ def class_is_over(sports_class):
     return sports_class.get_start_hour() + sports_class.get_duration_hrs() <= common.current_hour()
 
 
+# CHANGE HERE IF: you change the rule that a coach can't teach two classes at the same time.
 def coach_has_time_clash(class_list, coach_id, date_text, start_hour, duration_hrs, ignore_class_id=None):
     """Return True if coach_id already has a class overlapping this time slot."""
     for sports_class in class_list:
@@ -529,6 +557,9 @@ def coach_has_time_clash(class_list, coach_id, date_text, start_hour, duration_h
     return False
 
 
+# ===== RULES: checks done when a class is scheduled or edited =====
+# CHANGE HERE IF: you change a class rule or its message: class type, date not in the past, length,
+# opening hours, private = exactly 1 person, group size, fee limits.
 def validate_class_details(class_type, date_text, start_hour, duration_hrs, max_pax, fee_per_pax,
                            check_timing=True):
     """Check the details shared by scheduling and updating a class.
@@ -559,6 +590,7 @@ def validate_class_details(class_type, date_text, start_hour, duration_hrs, max_
         raise ValueError(f"Fee per person must be between RM 0.01 and RM {MAX_CLASS_FEE:g}.")
 
 
+# CHANGE HERE IF: you change what happens when a class is scheduled (calls validate_class_details).
 def schedule_class(coach_id, class_type, date_text, start_hour, duration_hrs, max_pax, fee_per_pax,
                    member_id=None):
     """Validate and create a new class. The class takes its sport from
@@ -594,6 +626,8 @@ def schedule_class(coach_id, class_type, date_text, start_hour, duration_hrs, ma
     return new_class
 
 
+# CHANGE HERE IF: you change the rules for editing a class: started classes can't change; a billed
+# class keeps its fee and length; max people can't drop below who is enrolled.
 def update_class(class_id, new_date_text, new_start_hour, new_duration_hrs, new_max_pax, new_fee_per_pax):
     """Update a class's date, hour, duration, maximum people and fee,
     re-checking the coach's time clash, every enrolled member, and that
@@ -691,6 +725,8 @@ def members_valid_on(date_text):
     return valid_members
 
 
+# CHANGE HERE IF: you change who may join a class: membership valid on the class day, no other
+# class at the same time.
 def member_enrol_problem(member_id, date_text, start_hour, duration_hrs, class_list, ignore_class_id=None):
     """Return a plain message saying why member_id can't join a class at
     this date and time, or None if they can: the member must exist, their
@@ -713,6 +749,7 @@ def member_enrol_problem(member_id, date_text, start_hour, duration_hrs, class_l
     return None
 
 
+# CHANGE HERE IF: you change the enrol rules (class not started, not full, not already enrolled).
 def enrol_participant(class_id, member_id):
     """Add member_id to a class's participant list: no duplicates, capped
     at max_pax, only before the class starts, only while the membership
@@ -752,6 +789,7 @@ def enrol_participant(class_id, member_id):
     common.rewrite_records(common.CLASSES_FILE, updated_lines, line_to_class)
 
 
+# CHANGE HERE IF: you change the remove rules (class not started; refused while a bill exists).
 def remove_participant(class_id, member_id):
     """Remove member_id from a class's participant list. Refused once the
     class has started (it is history) and while a bill (not VOID) was made
@@ -819,6 +857,7 @@ def class_bill_info(class_id, member_id=None):
     return found_bill
 
 
+# CHANGE HERE IF: you change the rules for deleting a class (not started, no unvoided bill).
 def cancel_class(class_id):
     """Remove a class permanently from classes.txt. Blocked once the class
     has started (it is history: worked hours and commission come from it)
@@ -848,6 +887,70 @@ def cancel_class(class_id):
     common.rewrite_records(common.CLASSES_FILE, remaining_lines, line_to_class)
 
 
+# ===== FORCE DELETE A COACH: delete their upcoming classes (and void those classes' unpaid bills) =====
+# CHANGE HERE IF: you change what a force delete clears. Bills are VOIDED (never deleted); a PAID bill on
+# a class stops it before anything is changed.
+def readable_bill_line(line):
+    """Parser for rewrite_records: the fields of a bills.txt line, or None if it is damaged."""
+    return common.split_fields(line, BILL_FIELD_COUNT)
+
+
+def force_delete_coach_plan(coach_id):
+    """Work out what a force delete of this coach would do, WITHOUT changing anything. Returns a
+    dictionary of lists: delete_ids / delete_classes (upcoming classes to delete), void_ids /
+    void_bills (their unpaid bills) and stuck (reasons the rules do not allow it)."""
+    plan = {"delete_ids": [], "delete_classes": [], "void_ids": [], "void_bills": [], "stuck": []}
+    all_bills = common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT)
+    for upcoming in upcoming_classes_for_coach(coach_id):
+        class_id = upcoming.get_class_id()
+        plan["delete_ids"].append(class_id)
+        plan["delete_classes"].append(f"{class_id} ({upcoming.get_date_text()} {upcoming.get_start_hour():02d}:00, "
+                                      f"{len(upcoming.get_participant_list())} enrolled)")
+        for bill in all_bills:
+            if bill[2] == "COACHING" and bill[3] == class_id and bill[8] != "VOID":
+                if bill[8] == "UNPAID":
+                    plan["void_ids"].append(bill[0])
+                    plan["void_bills"].append(f"{bill[0]} (member {bill[1]}, RM {bill[7]})")
+                else:
+                    plan["stuck"].append(f"Class {class_id} has bill {bill[0]}, which is paid. A paid bill can't "
+                                         "be voided, so the class can't be deleted.")
+    return plan
+
+
+def force_delete_coach_text(plan):
+    """The bullet list shown to the user: everything a force delete would do first."""
+    lines = ["- delete " + str(len(plan["delete_classes"])) + " upcoming class(es) (enrolled members are taken "
+             "out with them): " + ", ".join(plan["delete_classes"])]
+    if len(plan["void_bills"]) > 0:
+        lines.append("- void " + str(len(plan["void_bills"])) + " unpaid bill(s) on those classes: "
+                     + ", ".join(plan["void_bills"]))
+    return "\n".join(lines)
+
+
+def force_delete_coach(coach_id):
+    """Void the unpaid bills on the coach's upcoming classes, delete those classes, then delete the coach
+    with the normal rules (removed, or kept INACTIVE if they have past classes). Raises ValueError (and
+    changes NOTHING) if the rules don't allow it. Returns the message to show."""
+    if find_coach_by_id(load_all_coaches(), coach_id) is None:
+        raise ValueError(f"No coach found with ID {coach_id}.")
+    plan = force_delete_coach_plan(coach_id)
+    if len(plan["stuck"]) > 0:
+        raise ValueError("Force delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
+    if len(plan["void_ids"]) > 0:
+        new_lines = []
+        for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
+            if fields[0] in plan["void_ids"]:
+                fields[8] = "VOID"
+            new_lines.append("|".join(fields))
+        common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
+    for class_id in plan["delete_ids"]:
+        cancel_class(class_id)   # the normal class delete: its bills are void now, so it is allowed
+    message = delete_coach(coach_id)
+    if len(plan["delete_ids"]) > 0:
+        message = message + "\nAlso done first:\n" + force_delete_coach_text(plan)
+    return message
+
+
 def classes_in_month(class_list, month_text):
     """Return the classes whose date starts with month_text ('YYYY-MM').
     An empty month_text means every class."""
@@ -873,6 +976,7 @@ def coach_hours_by_month(class_list, month_text=""):
     return hours_by_coach
 
 
+# CHANGE HERE IF: you change which classes count as 'worked' (now: classes that are already over).
 def split_worked_classes(class_list):
     """Split classes into (worked, upcoming): worked ones are over, so
     their hours, pay and commission have really been earned."""
@@ -886,6 +990,8 @@ def split_worked_classes(class_list):
     return worked_classes, upcoming_classes
 
 
+# ===== HOURS AND COMMISSION =====
+# CHANGE HERE IF: you change how commission is worked out (now: class fee x people x commission %).
 def calculate_commission(sports_class, commission_pct):
     """Commission = fee_per_pax * number_of_participants * commission_pct / 100."""
     participant_count = len(sports_class.get_participant_list())
@@ -922,6 +1028,8 @@ def total_commission_recursive(class_list, coach_commission_pct, index=0):
 #   page each: blank form adds, click a row to update, Delete beside it),
 #   Enrol Member, Remove Member, Hours & Commission
 # ---------------------------------------------------------------------------
+# ===== SCREEN: everything below builds the Coaching tab's pages =====
+# CHANGE HERE IF: you add or rename a button on the Coaching menu (name, hint, page instructions).
 COACHING_ACTIONS = [
     ("Manage Coaches", "Add, update or delete coaches",
      "Blank form = add a new coach. Click a coach to update them, then Save Changes. "
@@ -948,6 +1056,8 @@ NAME_COLUMN_WIDTH = 19
 STATUS_CHOICES = ("Active", "Inactive")
 CHOICE_WIDTH = 24
 
+# CHANGE HERE IF: you change the start-hour and class-length drop-down lists (they follow
+# common.OPENING_HOUR / CLOSING_HOUR and MAX_CLASS_DURATION).
 HOUR_CHOICES = []
 for choice_hour in range(common.OPENING_HOUR, common.CLOSING_HOUR):
     HOUR_CHOICES.append(f"{choice_hour:02d}:00")
@@ -973,6 +1083,7 @@ def member_choice_text(member_id, member_name):
     return common.fit_text(f"{member_id} {member_name}", CHOICE_WIDTH)
 
 
+# ===== SCREEN: the Coaching tab entry point (called by main.py) =====
 def build_coaching_tab(parent):
     """Build the Coaching & Class Management tab inside parent (the main
     window's tab area) and return its frame. The tab opens on a menu
@@ -1224,6 +1335,7 @@ def read_class_values(fields):
     return fields["date"].get().strip(), start_hour, duration_hours, max_pax, fee
 
 
+# ===== SCREEN: Manage Coaches page (blank form adds, click a row to edit, Delete beside a row) =====
 def build_manage_coaches_page(page_frame, page_hooks):
     """Build the Manage Coaches page (add, update and delete on one page)
     with the shared common.build_manage_page."""
@@ -1296,8 +1408,22 @@ def build_manage_coaches_page(page_frame, page_hooks):
         return message
 
     def delete_action(coach_id):
-        """Delete the coach, or keep them as Inactive if they have past classes."""
-        return delete_coach(coach_id)
+        """Delete the coach, or keep them as Inactive if they have past classes. If upcoming classes
+        block it, offer a FORCE DELETE (list what is cleared first, ask Yes/No); None means No."""
+        try:
+            return delete_coach(coach_id)
+        except ValueError as error:
+            plan = force_delete_coach_plan(coach_id)
+            if len(plan["delete_ids"]) == 0:
+                raise
+            if len(plan["stuck"]) > 0:
+                raise ValueError(f"{error}\n\nForce delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
+            question = (f"{error}\n\nForce delete will first:\n{force_delete_coach_text(plan)}\n\n"
+                        "then delete the coach (or keep them INACTIVE if they have past classes). "
+                        "This cannot be undone.\n\nForce delete?")
+            if not messagebox.askyesno("Force delete", question):
+                return None
+            return force_delete_coach(coach_id)
 
     def delete_question(coach_id):
         """Confirmation question naming the coach and what will happen."""
@@ -1318,6 +1444,7 @@ def build_manage_coaches_page(page_frame, page_hooks):
         empty_text="No coaches found.")
 
 
+# ===== SCREEN: Manage Classes page (schedule / edit / delete a class) =====
 def build_manage_classes_page(page_frame, page_hooks):
     """Build the Manage Classes page: a blank form schedules a class,
     clicking a row updates it, Delete beside a row cancels it."""
@@ -1533,6 +1660,7 @@ def build_manage_classes_page(page_frame, page_hooks):
         summary_text=summary_text, empty_text="No classes found.")
 
 
+# ===== SCREEN: Enrol Member page =====
 def build_enrol_page(page_frame):
     """Build the Enrol Member page and return its refresh function."""
     form_widgets = {}
@@ -1600,6 +1728,7 @@ def build_enrol_page(page_frame):
                                   empty_text="No upcoming classes with space.")
 
 
+# ===== SCREEN: Hours & Commission page =====
 def build_report_page(page_frame, page_hooks):
     """Build the Hours & Commission page: one row per coach for the
     chosen month (or all time)."""

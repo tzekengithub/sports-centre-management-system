@@ -7,7 +7,9 @@ Start from a deleted `Source Code/data/` so the sample rows below exist. Dates a
 | 1 | Membership > Register | Name, phone, type Annual, Register | New member card shown |
 | 2 | Membership > Renew | Pick MEM001 (expires in 10 days) | Expiry moves on |
 | 3 | Membership > Manage Members | Click MEM004, change type, Update | Saved |
-| 4 | Membership > Manage Members | Delete beside MEM002 | Refused (booking, unpaid bill, class) |
+| 4 | Membership > Manage Members | Delete beside MEM002, answer Yes, then answer **No** to the Force delete question | Question lists BIL002, BKG002 and CLS002 that would be cleared; No changes nothing (later steps still use MEM002) |
+| 4a | Membership > Manage Members | Delete beside MEM001 | After the question: error "Force delete is not possible ... BIL001 ... paid" (a paid bill can't be voided) |
+| 4b | Membership > Manage Members | Delete beside MEM003, answer Yes to both | MEM003 deleted; BIL003 voided, BKG004 cancelled, out of CLS001 (do this at the END of the demo: later steps use BKG004, BIL003 and CLS001) |
 | 5 | Membership > Manage Members | Delete beside MEM005 (Demo Delete) | Member removed |
 | 6 | Booking > Book a Court | Pick member, free cells, Book | "Booked" message with Hours line |
 | 7 | Booking > Reschedule | BKG002, new date/hour | Moved |

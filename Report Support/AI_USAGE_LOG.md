@@ -762,6 +762,13 @@ Checked by driving the buttons in a launched window.
 - **Decision:** Pay-As-You-Go (RM 0.00) has nothing to bill. A bill dated the same day as a Renew still counts for the new period (limitation: bill again the next day).
 - **Verify:** FEE-01..08, CC-01/02, GUI-01..07 in `TEST_CASES.md`.
 
+## Entry 33 - Force delete for members and coaches
+- **Asked:** a force delete that links back to the related records and asks the user whether to clear them, so a delete is not simply refused.
+- **Decisions (asked first):** stay within the project rules (bills voided, bookings cancelled, never deleted; PAID bills and past records stay), and cover members and coaches.
+- **Produced:** `membership.force_delete_plan`, `force_delete_text`, `force_delete_member` and the Yes/No prompt in `delete_action`; `coaching.force_delete_coach_plan`, `force_delete_coach_text`, `force_delete_coach` and the prompt on the Manage Coaches page; `common.read_fields`; `common.build_manage_page` accepts a `None` result from `delete_action` (user said No).
+- **Safety:** the plan is worked out first without changing anything; if a PAID bill or a started booking is in the way, nothing is changed and the message names it.
+- **Verify:** FD-01..FD-14 in `TEST_CASES.md` (38 checks, including the real Delete buttons); all earlier suites pass.
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their

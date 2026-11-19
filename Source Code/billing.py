@@ -8,6 +8,17 @@ Purpose     : Billing, Payments & Finance module - create bills, take
 Date        : 2026-11-07
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 CLASSES .......... Bill (and RetailBill, its child)
+#   2 LOGIC (no screens) saving/loading bills.txt, making a bill (generate_bill) and its RULES, paying,
+#                        receipts, voiding, deleting, daily revenue totals
+#   3 SCREEN (tkinter) . BILLING_ACTIONS menu, then one page per action: Create Bill, Pay Bill,
+#                        Void Bill / Delete Bill / View Receipt (build_status_page), Daily Revenue
+#   4 ENTRY POINT ...... build_billing_tab(parent) is called by main.py
+# bills.txt line:  id|member id|category|booking or class id|description|amount|discount|total|status|date
+# status is UNPAID, PAID or VOID. Prices, discounts and payment methods are in common.py (SETTINGS).
+# Tip: a CHANGE HERE IF line above a function says when you would edit it.
+
 import os
 import tkinter as tk
 from tkinter import messagebox
@@ -133,10 +144,12 @@ class RetailBill(Bill):
 # ---------------------------------------------------------------------------
 # LOGIC LAYER
 # ---------------------------------------------------------------------------
+# ===== SAVING: reading bills.txt (a line with the wrong number of fields is skipped) =====
 BILL_FIELD_COUNT = 10
 MEMBER_FIELD_COUNT = 6
 BOOKING_FIELD_COUNT = 8
 CLASS_FIELD_COUNT = 10
+# CHANGE HERE IF: you change the biggest retail price or the biggest amount of money received.
 MAX_RETAIL_AMOUNT = 10000.0
 MAX_TENDERED_AMOUNT = 100000.0
 
@@ -176,6 +189,8 @@ def get_member_type(member_id):
     return None
 
 
+# CHANGE HERE IF: you change how a COURT bill amount is worked out (now: court rate per hour from
+# common.SPORTS x number of hours).
 def get_booking_description(booking_id):
     """Return (amount, description) for a booking, using SPORTS rate."""
     for line in common.read_lines(common.BOOKINGS_FILE):
@@ -206,6 +221,7 @@ def booking_is_cancelled(booking_id):
     return False
 
 
+# CHANGE HERE IF: you change how a COACHING bill amount is worked out (now: the class fee per person).
 def get_class_description(class_id):
     """Return (amount, description) for a class, using fee_per_pax."""
     for line in common.read_lines(common.CLASSES_FILE):
@@ -223,6 +239,9 @@ def get_class_description(class_id):
     raise ValueError(f"No class found with ID {class_id}.")
 
 
+# ===== MAKING A BILL =====
+# CHANGE HERE IF: you change the bill rules: member discount (common.MEMBER_DISCOUNT_PCT), no double
+# billing, and what each category (COURT / COACHING / MEMBERSHIP / RETAIL) charges.
 def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amount=0.0):
     """Create a new UNPAID bill from a booking, class, membership fee or
     manual retail item, applying the member's discount percentage."""
@@ -279,6 +298,8 @@ def generate_bill(member_id, category, ref_id, retail_item_name=None, retail_amo
     return new_bill
 
 
+# CHANGE HERE IF: you change what 'the current membership period' means (now: expiry date minus the
+# type's days, which is when Register or Renew last happened).
 def membership_period_start(member_id):
     """Return the date (YYYY-MM-DD) the member's CURRENT membership period
     began, or None if the member or the date can't be read. Register and
@@ -317,6 +338,8 @@ def membership_bill_info(member_id):
     return found_bill
 
 
+# CHANGE HERE IF: you change when a membership fee can be billed (now: once per period; Pay-As-You-Go
+# has no fee). The two message texts are in this function.
 def membership_fee_problem(member_id):
     """Return None if the member's membership fee can be billed now, or a
     tuple (error text for generate_bill, note for the Create Bill page).
@@ -334,6 +357,7 @@ def membership_fee_problem(member_id):
             "Renew the membership in Membership to bill again.")
 
 
+# CHANGE HERE IF: you change the 'a booking or class can't be billed twice' rule.
 def billed_references(member_id):
     """Return a set of (category, ref_id) pairs already billed to
     member_id on bills that are not VOID, used to stop double billing."""
@@ -399,6 +423,9 @@ def find_bill_by_id(bill_list, bill_id):
     return None
 
 
+# ===== PAYING, RECEIPTS, VOIDING, DELETING =====
+# CHANGE HERE IF: you change the payment rule. Now: method must be in common.VALID_PAYMENT_METHODS,
+# the amount must cover the total, change is given, and a receipt is written.
 def pay_bill(bill_id, payment_method, amount_tendered):
     """Mark a bill PAID after validating the payment method and amount.
     Returns (bill, change). Raises ValueError on invalid input."""
@@ -434,6 +461,7 @@ def pay_bill(bill_id, payment_method, amount_tendered):
     return target_bill, change
 
 
+# CHANGE HERE IF: you change what a receipt looks like (one text file per bill in data/receipts).
 def write_receipt(bill, payment_method, amount_tendered, change):
     """Write a receipt text file to data/receipts/<bill_id>.txt."""
     receipt_path = os.path.join(common.RECEIPT_FOLDER, bill.get_bill_id() + ".txt")
@@ -493,6 +521,7 @@ def search_bills(bill_list, search_field, search_text):
     return results
 
 
+# CHANGE HERE IF: you change the void rule. Now: a PAID bill can never be voided (no refunds).
 def void_bill(bill_id):
     """Set a bill's status to VOID (keeps the record). Blocked if the
     bill is PAID or already VOID, so clicking Void twice gives a clear
@@ -516,6 +545,7 @@ def void_bill(bill_id):
     common.rewrite_records(common.BILLS_FILE, updated_lines, line_to_bill)
 
 
+# CHANGE HERE IF: you change the delete rule. Now: only VOID bills can be deleted.
 def delete_void_bill(bill_id):
     """Permanently delete a bill, only if its status is VOID."""
     bill_list = load_all_bills()
@@ -542,6 +572,7 @@ def money_total(*amounts):
     return round(total, 2)
 
 
+# CHANGE HERE IF: you change how daily revenue is added up (now: PAID bills only, split by category).
 def daily_revenue_summary(date_text):
     """Return (category_totals_dict, grand_total, bill_count, paid_count,
     unpaid_count) for bills dated date_text. The totals count only PAID
@@ -598,6 +629,8 @@ def total_bills_recursive(bill_list, index=0):
 # action has its own one-page screen with a Back button: Create Bill,
 # Pay Bill, Void Bill, Delete Bill, View Receipt, Daily Revenue.
 # ---------------------------------------------------------------------------
+# ===== SCREEN: everything below builds the Billing tab's pages =====
+# CHANGE HERE IF: you add or rename a button on the Billing menu (name, hint, page instructions).
 BILLING_ACTIONS = [
     ("Create Bill", "Bill a member",
      "Pick the member and what the bill is for. Check the total (member discount included), "
@@ -615,6 +648,8 @@ BILLING_ACTIONS = [
      "Only paid bills count."),
 ]
 
+# CHANGE HERE IF: you add a bill category radio button on the Create Bill page (also needs the
+# bill rules in generate_bill, the tip in CATEGORY_TIPS, and common.BILL_CATEGORIES).
 CATEGORY_CHOICES = (("COURT", "Court Rental"), ("COACHING", "Coaching Class"),
                     ("MEMBERSHIP", "Membership Fee"), ("RETAIL", "Retail Sale"))
 REVENUE_BAR_WIDTH = 260
@@ -624,6 +659,8 @@ CATEGORY_TIPS = {
     "MEMBERSHIP": "Bill the yearly or monthly fee for the member's membership type.",
     "RETAIL": "Bill something sold at the counter: type the item and its price.",
 }
+# CHANGE HERE IF: you add a payment method: add its hover hint here, add it to the radio buttons in
+# build_pay_page ('for method_name in (...)'), and to common.VALID_PAYMENT_METHODS.
 METHOD_TIPS = {
     "Cash": "Paid in cash. Type how much they handed over; the change is worked out.",
     "Card": "Paid by card. Always the exact total.",
@@ -632,11 +669,13 @@ METHOD_TIPS = {
 BILL_LIST_HEADER = f"{'Bill ID':<9}{'Date':<11}{'Member ID':<10}{'For':<16}{'Total RM':>9}"
 
 
+# SCREEN: shows an error message box (used by every handler below).
 def show_problem(error):
     """Show a ValueError's plain message in a standard error box."""
     messagebox.showerror("Please check", str(error))
 
 
+# ===== SCREEN: the Billing tab entry point (called by main.py) =====
 def build_billing_tab(parent):
     """Build the Billing, Payments & Finance tab inside parent (the main
     window's tab area) and return its frame. The tab opens on a menu
@@ -652,6 +691,7 @@ def build_billing_tab(parent):
     return window
 
 
+# ----- what each list row and the details panel show on the Pay / Void / Delete / Receipt pages -----
 def bill_rows_with_status(status, search_text):
     """Return (bill_id, row_text) for bills with this status, newest
     first, filtered by member ID if search_text is given."""
@@ -689,6 +729,7 @@ def describe_bill(bill_id):
     ])
 
 
+# ===== SCREEN: Void Bill, Delete Bill and View Receipt pages (one builder, three buttons) =====
 def build_status_page(page_frame, status):
     """Build the Void Bill (UNPAID), Delete Bill (VOID) or View Receipt
     (PAID) page and return its refresh function."""
@@ -737,6 +778,7 @@ def build_status_page(page_frame, status):
                                           empty_text="No paid bills.", result_title="Receipt")
 
 
+# ===== SCREEN: Pay Bill page =====
 def build_pay_page(page_frame):
     """Build the Pay Bill page and return its refresh function."""
     form_widgets = {}
@@ -805,6 +847,7 @@ def build_pay_page(page_frame):
 MEMBER_MENU_WIDTH = 30
 
 
+# ===== SCREEN: Create Bill page (member, category, item, preview, Create Bill button) =====
 def build_create_bill_page(section_frame, page_hooks):
     """Build the Create Bill page: member, category, the item being
     billed, a live price preview and a Create Bill button."""
@@ -1019,6 +1062,7 @@ def build_create_bill_page(section_frame, page_hooks):
     page_hooks["Create Bill"] = on_show
 
 
+# ===== SCREEN: Daily Revenue page =====
 def build_revenue_page(section_frame, page_hooks):
     """Build the Daily Revenue page: a date picker and one row per
     bill category with its total and a bar, plus the day's grand total."""

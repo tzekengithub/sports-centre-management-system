@@ -8,6 +8,17 @@ Purpose     : Membership Registration module - lets the public register
 Date        : 2026-11-07
 """
 
+# MAP OF THIS FILE (press Ctrl+F and type a section name to jump to it):
+#   1 CLASS ............ Member (child of common.Person)
+#   2 LOGIC (no screens) saving/loading members.txt, register / update / renew / delete, the RULES that
+#                        stop a member being deleted, expiry and summary numbers
+#   3 SCREEN (tkinter) . MEMBERSHIP_ACTIONS menu, the Register page (one card per membership type),
+#                        the Manage Members page, the Renew page
+#   4 ENTRY POINT ...... build_membership_tab(parent) is called by main.py
+# members.txt line:  id|name|phone|membership type|join date|expiry date
+# The membership TYPES, FEES, DISCOUNTS and DURATIONS live in common.py (SETTINGS), not here.
+# Tip: a CHANGE HERE IF line above a function says when you would edit it.
+
 import datetime
 import os
 import tkinter as tk
@@ -75,6 +86,7 @@ class Member(common.Person):
 CARD_PICTURE_WIDTH = 240
 CARD_PICTURE_MAX_WIDTH = 260
 
+# ===== SAVING: reading members.txt (a line with the wrong number of fields is skipped) =====
 MEMBER_FIELD_COUNT = 6
 
 
@@ -120,6 +132,9 @@ def find_member_by_id(member_list, member_id):
     return None
 
 
+# ===== REGISTERING A MEMBER =====
+# CHANGE HERE IF: you change the registration rules. Now: the phone must not already be registered,
+# and expiry = join date + the type's days from common.MEMBERSHIP_DURATION_DAYS.
 def register_member(name, phone, membership_type):
     """Validate input, build a new Member, append it to the file, return it.
     Raises ValueError on invalid input or duplicate phone number."""
@@ -161,6 +176,8 @@ BILL_FIELD_COUNT = 10
 CLASS_FIELD_COUNT = 10
 
 
+# ===== RULES: what stops a member being deleted (all three are called by delete_member) =====
+# CHANGE HERE IF: you change the 'upcoming booking' rule for deleting a member.
 def has_future_confirmed_booking(member_id):
     """Return True if member_id has a CONFIRMED booking on or after today."""
     today = common.today_string()
@@ -176,6 +193,7 @@ def has_future_confirmed_booking(member_id):
     return False
 
 
+# CHANGE HERE IF: you change the 'enrolled in an upcoming class' rule for deleting a member.
 def upcoming_class_for_member(member_id):
     """Return the ID of a class that hasn't started yet with member_id
     enrolled, or None. Read straight from classes.txt (membership does not
@@ -192,6 +210,7 @@ def upcoming_class_for_member(member_id):
     return None
 
 
+# CHANGE HERE IF: you change the 'unpaid bill' rule for deleting a member.
 def has_unpaid_bill(member_id):
     """Return True if member_id has a bill that is still UNPAID."""
     for line in common.read_lines(common.BILLS_FILE):
@@ -205,6 +224,7 @@ def has_unpaid_bill(member_id):
     return False
 
 
+# CHANGE HERE IF: you change what may be edited on a member and the checks on it (phone must stay unique).
 def update_member(member_id, new_name, new_phone, new_type):
     """Update an existing member's name, phone and type. Returns the
     updated member list. Raises ValueError if member_id not found or
@@ -231,6 +251,7 @@ def update_member(member_id, new_name, new_phone, new_type):
     return load_all_members()
 
 
+# CHANGE HERE IF: you change how renewing works. Now: new expiry = TODAY + the type's duration.
 def renew_member(member_id):
     """Extend a member's expiry date from today by their type's duration.
     Returns the new expiry date string."""
@@ -257,6 +278,8 @@ def renew_member(member_id):
     return new_expiry
 
 
+# CHANGE HERE IF: you change the rules that block deleting a member. The three checks are the first
+# lines of this function: remove one to stop it blocking, or add a new check the same way.
 def delete_member(member_id):
     """Delete a member permanently. Blocked if the member has a future
     confirmed booking or an unpaid bill."""
@@ -289,6 +312,128 @@ def delete_member(member_id):
     common.rewrite_records(common.MEMBERS_FILE, remaining_lines, line_to_member)
 
 
+# ===== FORCE DELETE: clear the records that block a delete, after the user agrees =====
+# CHANGE HERE IF: you change what a force delete clears. It stays inside the project rules: bills are
+# VOIDED (never deleted), bookings are CANCELLED (never deleted), and anything the rules can't undo (a
+# PAID bill, a booking that has started) stops the force delete before anything is changed.
+def readable_bill_line(line):
+    """Parser for rewrite_records: the fields of a bills.txt line, or None if it is damaged."""
+    return common.split_fields(line, BILL_FIELD_COUNT)
+
+
+def readable_booking_line(line):
+    """Parser for rewrite_records: the fields of a bookings.txt line, or None if it is damaged."""
+    return common.split_fields(line, BOOKING_FIELD_COUNT)
+
+
+def readable_class_line(line):
+    """Parser for rewrite_records: the fields of a classes.txt line, or None if it is damaged."""
+    return common.split_fields(line, CLASS_FIELD_COUNT)
+
+
+def force_delete_plan(member_id):
+    """Work out what a force delete of this member would do, WITHOUT changing anything.
+    Returns a dictionary of lists: void_ids / void_bills (unpaid bills to void), cancel_bookings
+    (upcoming CONFIRMED bookings to cancel), leave_classes (upcoming classes to take them out of)
+    and stuck (reasons the project rules do not allow it; if any, nothing may be changed)."""
+    today = common.today_string()
+    now_hour = common.current_hour()
+    plan = {"void_ids": [], "void_bills": [], "cancel_bookings": [], "leave_classes": [], "stuck": []}
+    all_bills = common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT)
+    for bill in all_bills:
+        if bill[1] == member_id and bill[8] == "UNPAID":
+            plan["void_ids"].append(bill[0])
+            plan["void_bills"].append(f"{bill[0]} ({bill[4]}, RM {bill[7]})")
+
+    for booking in common.read_fields(common.BOOKINGS_FILE, BOOKING_FIELD_COUNT):
+        if booking[1] != member_id or booking[7] != "CONFIRMED" or booking[4] < today:
+            continue
+        if booking[4] == today and booking[5].isdigit() and int(booking[5]) <= now_hour:
+            plan["stuck"].append(f"Booking {booking[0]} has already started, so it is kept as a record "
+                                 "and can't be cancelled.")
+            continue
+        plan["cancel_bookings"].append(booking[0])
+        for bill in all_bills:
+            if bill[2] == "COURT" and bill[3] == booking[0] and bill[8] != "VOID" and bill[0] not in plan["void_ids"]:
+                if bill[8] == "PAID":
+                    plan["stuck"].append(f"Booking {booking[0]} has bill {bill[0]}, which is paid. A paid bill "
+                                         "can't be voided, so the booking can't be cancelled.")
+                else:
+                    plan["stuck"].append(f"Booking {booking[0]} is billed to {bill[1]} (bill {bill[0]}), "
+                                         "so it can't be cancelled.")
+
+    for class_fields in common.read_fields(common.CLASSES_FILE, CLASS_FIELD_COUNT):
+        if not class_fields[5].isdigit() or member_id not in class_fields[9].split(";"):
+            continue
+        not_started = class_fields[4] > today or (class_fields[4] == today and int(class_fields[5]) > now_hour)
+        if not not_started:
+            continue
+        plan["leave_classes"].append(class_fields[0])
+        for bill in all_bills:
+            if (bill[2] == "COACHING" and bill[3] == class_fields[0] and bill[1] == member_id
+                    and bill[8] != "VOID" and bill[0] not in plan["void_ids"]):
+                plan["stuck"].append(f"Class {class_fields[0]} has bill {bill[0]} for this member, which is paid. "
+                                     "A paid bill can't be voided, so they can't be taken out of the class.")
+    return plan
+
+
+def force_delete_text(plan):
+    """The bullet list shown to the user: everything a force delete would do first."""
+    lines = []
+    if len(plan["void_bills"]) > 0:
+        lines.append("- void " + str(len(plan["void_bills"])) + " unpaid bill(s): " + ", ".join(plan["void_bills"]))
+    if len(plan["cancel_bookings"]) > 0:
+        lines.append("- cancel " + str(len(plan["cancel_bookings"])) + " upcoming booking(s) (kept as CANCELLED): "
+                     + ", ".join(plan["cancel_bookings"]))
+    if len(plan["leave_classes"]) > 0:
+        lines.append("- take the member out of " + str(len(plan["leave_classes"])) + " upcoming class(es): "
+                     + ", ".join(plan["leave_classes"]))
+    return "\n".join(lines)
+
+
+def force_delete_member(member_id):
+    """Void the member's unpaid bills, cancel their upcoming bookings, take them out of upcoming
+    classes, then delete them with the normal rules. Raises ValueError (and changes NOTHING) if
+    the project rules don't allow it. Returns the message to show."""
+    if find_member_by_id(load_all_members(), member_id) is None:
+        raise ValueError(f"No member found with ID {member_id}.")
+    plan = force_delete_plan(member_id)
+    if len(plan["stuck"]) > 0:
+        raise ValueError("Force delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
+
+    if len(plan["void_ids"]) > 0:
+        new_lines = []
+        for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
+            if fields[0] in plan["void_ids"]:
+                fields[8] = "VOID"
+            new_lines.append("|".join(fields))
+        common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
+    if len(plan["cancel_bookings"]) > 0:
+        new_lines = []
+        for fields in common.read_fields(common.BOOKINGS_FILE, BOOKING_FIELD_COUNT):
+            if fields[0] in plan["cancel_bookings"]:
+                fields[7] = "CANCELLED"
+            new_lines.append("|".join(fields))
+        common.rewrite_records(common.BOOKINGS_FILE, new_lines, readable_booking_line)
+    if len(plan["leave_classes"]) > 0:
+        new_lines = []
+        for fields in common.read_fields(common.CLASSES_FILE, CLASS_FIELD_COUNT):
+            if fields[0] in plan["leave_classes"]:
+                remaining = []
+                for participant in fields[9].split(";"):
+                    if participant != member_id and participant != "":
+                        remaining.append(participant)
+                fields[9] = ";".join(remaining)
+            new_lines.append("|".join(fields))
+        common.rewrite_records(common.CLASSES_FILE, new_lines, readable_class_line)
+
+    delete_member(member_id)   # the normal blockers are cleared now, so the normal rules pass
+    message = f"Member {member_id} deleted."
+    if force_delete_text(plan) != "":
+        message = message + "\nAlso done first:\n" + force_delete_text(plan)
+    return message
+
+
 def count_members_by_type(member_list):
     """Return a dictionary of membership_type -> count."""
     type_counts = {}
@@ -301,6 +446,7 @@ def count_members_by_type(member_list):
     return type_counts
 
 
+# CHANGE HERE IF: you change the 'expiring soon' warning window (days) shown under the member list.
 EXPIRY_WARNING_DAYS = 30
 
 
@@ -391,6 +537,7 @@ def days_left_text(member):
     return f"{days_left} day(s) left"
 
 
+# CHANGE HERE IF: you change when a member counts as Active or Expired.
 def member_status(member):
     """Return 'Active' or 'Expired' by comparing the expiry date to today."""
     if member.get_expiry_date() >= common.today_string():
@@ -405,6 +552,8 @@ def member_status(member):
 # action has its own one-page screen with a Back button: Register,
 # Manage Members (update and delete on one page), Renew Membership.
 # ---------------------------------------------------------------------------
+# ===== SCREEN: everything below builds the Membership tab's pages =====
+# CHANGE HERE IF: you add or rename a button on the Membership menu (name, hint, page instructions).
 MEMBERSHIP_ACTIONS = [
     ("Register", "Sign up a new member",
      "Type the name and phone, click the membership type they want, then click Register."),
@@ -418,11 +567,13 @@ MEMBERSHIP_ACTIONS = [
 MEMBER_LIST_HEADER = f"{'Member ID':<10}{'Name':<20}{'Type':<14}{'Expires':<11}{'Status':<8}"
 
 
+# SCREEN: shows an error message box (used by every handler below).
 def show_problem(error):
     """Show a ValueError's plain message in a standard error box."""
     messagebox.showerror("Please check", str(error))
 
 
+# ===== SCREEN: the Membership tab entry point (called by main.py) =====
 def build_membership_tab(parent):
     """Build the Membership Registration tab inside parent (the main
     window's tab area) and return its frame. The tab opens on a menu
@@ -437,6 +588,7 @@ def build_membership_tab(parent):
     return window
 
 
+# ----- what each list row, the details panel and the summary line show -----
 def member_rows(search_text):
     """Return (member_id, row_text) for every member, or for those whose
     name contains search_text."""
@@ -469,6 +621,7 @@ def describe_member(member_id):
     ])
 
 
+# ----- button actions: each returns the message shown to the user, or raises ValueError -----
 def renew_action(member_id):
     """Renew the picked member and say until when."""
     new_expiry = renew_member(member_id)
@@ -476,8 +629,24 @@ def renew_action(member_id):
 
 
 def delete_action(member_id):
-    """Delete the picked member."""
-    delete_member(member_id)
+    """Delete the picked member. If bookings, bills or classes block it, offer a FORCE DELETE:
+    list what would be cleared first and ask Yes/No. Returns None if the user says No."""
+    try:
+        delete_member(member_id)
+    except ValueError as error:
+        plan = force_delete_plan(member_id)
+        nothing_to_clear = (len(plan["void_ids"]) + len(plan["cancel_bookings"]) + len(plan["leave_classes"])
+                            + len(plan["stuck"])) == 0
+        if find_member_by_id(load_all_members(), member_id) is None or nothing_to_clear:
+            raise
+        if len(plan["stuck"]) > 0:
+            raise ValueError(f"{error}\n\nForce delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
+        question = (f"{error}\n\nForce delete will first:\n{force_delete_text(plan)}\n\n"
+                    "then delete the member. Past bookings and paid bills stay on record. "
+                    "This cannot be undone.\n\nForce delete?")
+        if not messagebox.askyesno("Force delete", question):
+            return None
+        return force_delete_member(member_id)
     return f"Member {member_id} deleted."
 
 
@@ -505,6 +674,7 @@ def members_summary():
             f"{expiring_count} expiring in the next {EXPIRY_WARNING_DAYS} days.")
 
 
+# ===== SCREEN: Manage Members page (click a row to edit, Delete beside a row) =====
 def build_manage_members_page(page_frame, page_hooks):
     """Build the Manage Members page: every member listed with a Delete
     button beside each row; clicking a row loads that member into the
@@ -554,6 +724,9 @@ def build_manage_members_page(page_frame, page_hooks):
         summary_text=members_summary, empty_text="No members found.")
 
 
+# ===== SCREEN: Register page =====
+# CHANGE HERE IF: you change how membership card pictures are found: images/card_<type>.png where
+# <type> is the type in lower case (Pay-As-You-Go -> card_pay_as_you_go.png). No picture = text card.
 def load_card_picture(membership_type):
     """Return the PhotoImage for a membership type, or None if there is no usable picture."""
     name = membership_type.lower().replace(" ", "_").replace("-", "_")
@@ -576,6 +749,8 @@ def load_card_picture(membership_type):
     return None
 
 
+# SCREEN: Register page. One card per type is made by a loop over common.MEMBERSHIP_TYPES, so a new
+# type appears here by itself once it is added in common.py.
 def build_register_page(section_frame, page_hooks):
     """Build the Register page: name/phone, one card per membership
     type, and a Register button."""
