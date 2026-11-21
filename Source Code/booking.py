@@ -190,7 +190,8 @@ def load_member_expiry_dates():
     expiry_dates = {}
     for line in common.read_lines(common.MEMBERS_FILE):
         fields = common.split_fields(line, MEMBER_FIELD_COUNT)
-        if fields is not None:
+        # A member whose join or expiry date is damaged is left out (they can't book) instead of crashing.
+        if fields is not None and common.is_valid_date(fields[4]) and common.is_valid_date(fields[5]):
             expiry_dates[fields[0]] = common.normalize_date(fields[5])
     return expiry_dates
 

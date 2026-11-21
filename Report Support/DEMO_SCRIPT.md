@@ -6,7 +6,7 @@ Start from a deleted `Source Code/data/` so the sample rows below exist. Dates a
 |---|---|---|---|
 | 1 | Membership > Register | Name, phone, type Annual, Register | New member card shown |
 | 2 | Membership > Renew | Pick MEM001 (expires in 10 days) | Expiry moves on |
-| 3 | Membership > Manage Members | Click MEM004, change type, Update | Saved |
+| 3 | Membership > Manage Members | Click MEM004, change type to Annual, Save Changes | "Member MEM004 saved." and a note that a new membership period starts today with the new expiry date |
 | 4 | Membership > Manage Members | Delete beside MEM002, answer Yes, then answer **No** to the Force delete question | Question lists BIL002, BKG002 and CLS002 that would be cleared; No changes nothing (later steps still use MEM002) |
 | 4a | Membership > Manage Members | Delete beside MEM001 | After the question: error "Force delete is not possible ... BIL001 ... paid" (a paid bill can't be voided) |
 | 4b | Membership > Manage Members | Delete beside MEM003, answer Yes to both | MEM003 deleted; BIL003 voided, BKG004 cancelled, out of CLS001 (do this at the END of the demo: later steps use BKG004, BIL003 and CLS001) |

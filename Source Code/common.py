@@ -1697,6 +1697,27 @@ def read_fields(file_path, field_count):
     return rows
 
 
+def snapshot_files(file_paths):
+    """Remember the current lines of several data files, so a multi-file change can be undone."""
+    snapshot = {}
+    for file_path in file_paths:
+        snapshot[file_path] = read_lines(file_path)
+    return snapshot
+
+
+def restore_files(snapshot):
+    """Put every file in the snapshot back exactly as it was (only files that changed are written).
+    Returns the names of any files that could not be restored (an empty list = all good)."""
+    failed = []
+    for file_path in snapshot:
+        try:
+            if read_lines(file_path) != snapshot[file_path]:
+                write_lines(file_path, snapshot[file_path])
+        except OSError:
+            failed.append(os.path.basename(file_path))
+    return failed
+
+
 def file_error_message(file_path, error):
     """Plain message shown when a data file cannot be saved."""
     return (f"Could not save {os.path.basename(file_path)} ({error.strerror or error}). "

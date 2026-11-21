@@ -39,8 +39,11 @@ class Member(common.Person):
         super().__init__(name, phone)
         self.__member_id = member_id
         self.__membership_type = ""
-        self.__join_date = join_date
-        self.__expiry_date = expiry_date
+        if not common.is_valid_date(join_date):
+            raise ValueError("Join date must be YYYY-MM-DD.")
+        self.__join_date = common.normalize_date(join_date)
+        self.__expiry_date = ""
+        self.set_expiry_date(expiry_date)
         self.set_membership_type(membership_type)
 
     def get_member_id(self):
@@ -69,7 +72,7 @@ class Member(common.Person):
         """Validate and store a new expiry date."""
         if not common.is_valid_date(expiry_date):
             raise ValueError("Expiry date must be YYYY-MM-DD.")
-        self.__expiry_date = expiry_date
+        self.__expiry_date = common.normalize_date(expiry_date)
 
     def to_line(self):
         """Turn this member into a pipe-delimited text-file line."""
@@ -83,8 +86,9 @@ class Member(common.Person):
 # LOGIC LAYER (plain functions, no tkinter - callable and testable on their own)
 # ---------------------------------------------------------------------------
 # Membership card pictures: aim for this width, never show wider than the maximum (pixels).
-CARD_PICTURE_WIDTH = 240
-CARD_PICTURE_MAX_WIDTH = 260
+# Four cards per row must fit the 1000 px window with the Register button, so keep the max under 240.
+CARD_PICTURE_WIDTH = 220
+CARD_PICTURE_MAX_WIDTH = 230
 
 # ===== SAVING: reading members.txt (a line with the wrong number of fields is skipped) =====
 MEMBER_FIELD_COUNT = 6
@@ -96,8 +100,13 @@ def line_to_member(line):
     fields = common.split_fields(line, MEMBER_FIELD_COUNT)
     if fields is None:
         return None
+    # A hand-edited bad date (2027-13-40) makes the line unreadable: it is hidden but kept in the
+    # file. Short dates (2027-1-5) are tidied to 2027-01-05, because dates are compared as text.
+    if not common.is_valid_date(fields[4]) or not common.is_valid_date(fields[5]):
+        return None
     try:
-        return Member(fields[0], fields[1], fields[2], fields[3], fields[4], fields[5])
+        return Member(fields[0], fields[1], fields[2], fields[3],
+                      common.normalize_date(fields[4]), common.normalize_date(fields[5]))
     except ValueError:
         return None
 
@@ -179,8 +188,11 @@ CLASS_FIELD_COUNT = 10
 # ===== RULES: what stops a member being deleted (all three are called by delete_member) =====
 # CHANGE HERE IF: you change the 'upcoming booking' rule for deleting a member.
 def has_future_confirmed_booking(member_id):
-    """Return True if member_id has a CONFIRMED booking on or after today."""
+    """Return True if member_id has a CONFIRMED booking that has not started yet (a later date, or
+    today with a start hour still to come). A booking that has already started today is
+    reported by started_booking_today instead."""
     today = common.today_string()
+    now_hour = common.current_hour()
     for line in common.read_lines(common.BOOKINGS_FILE):
         fields = common.split_fields(line, BOOKING_FIELD_COUNT)
         if fields is None:
@@ -188,9 +200,27 @@ def has_future_confirmed_booking(member_id):
         booking_member_id = fields[1]
         booking_date = fields[4]
         booking_status = fields[7]
-        if booking_member_id == member_id and booking_status == "CONFIRMED" and booking_date >= today:
+        if booking_member_id != member_id or booking_status != "CONFIRMED" or booking_date < today:
+            continue
+        started = booking_date == today and fields[5].isdigit() and int(fields[5]) <= now_hour
+        if not started:
             return True
     return False
+
+
+def started_booking_today(member_id):
+    """Return the ID of a CONFIRMED booking of member_id that has already started today (so it is
+    kept as a record and can't be cancelled), or None."""
+    today = common.today_string()
+    now_hour = common.current_hour()
+    for line in common.read_lines(common.BOOKINGS_FILE):
+        fields = common.split_fields(line, BOOKING_FIELD_COUNT)
+        if fields is None:
+            continue
+        if (fields[1] == member_id and fields[7] == "CONFIRMED" and fields[4] == today
+                and fields[5].isdigit() and int(fields[5]) <= now_hour):
+            return fields[0]
+    return None
 
 
 # CHANGE HERE IF: you change the 'enrolled in an upcoming class' rule for deleting a member.
@@ -240,7 +270,12 @@ def update_member(member_id, new_name, new_phone, new_type):
                     raise ValueError("Another member already uses this phone number.")
             member.set_name(new_name)
             member.set_phone(new_phone)
-            member.set_membership_type(new_type)
+            if new_type != member.get_membership_type():
+                # A different type starts a NEW membership period today (like Renew), so the expiry
+                # is today + the new type's days. Billing works out "this period" from the expiry.
+                member.set_membership_type(new_type)
+                member.set_expiry_date(common.add_days_to_date(
+                    common.today_string(), common.MEMBERSHIP_DURATION_DAYS.get(new_type, 365)))
             member_found = True
         updated_lines.append(member.to_line())
 
@@ -290,6 +325,10 @@ def delete_member(member_id):
     # (membership.py does not import booking.py or coaching.py).
     if has_future_confirmed_booking(member_id):
         raise ValueError("Cannot delete: member has an upcoming confirmed booking.")
+    started_id = started_booking_today(member_id)
+    if started_id is not None:
+        raise ValueError(f"Cannot delete: booking {started_id} has already started today, so it is kept as a "
+                         "record. Try again tomorrow.")
     if has_unpaid_bill(member_id):
         raise ValueError("Cannot delete: member has an unpaid bill.")
     class_id = upcoming_class_for_member(member_id)
@@ -401,33 +440,45 @@ def force_delete_member(member_id):
     if len(plan["stuck"]) > 0:
         raise ValueError("Force delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
 
-    if len(plan["void_ids"]) > 0:
-        new_lines = []
-        for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
-            if fields[0] in plan["void_ids"]:
-                fields[8] = "VOID"
-            new_lines.append("|".join(fields))
-        common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
-    if len(plan["cancel_bookings"]) > 0:
-        new_lines = []
-        for fields in common.read_fields(common.BOOKINGS_FILE, BOOKING_FIELD_COUNT):
-            if fields[0] in plan["cancel_bookings"]:
-                fields[7] = "CANCELLED"
-            new_lines.append("|".join(fields))
-        common.rewrite_records(common.BOOKINGS_FILE, new_lines, readable_booking_line)
-    if len(plan["leave_classes"]) > 0:
-        new_lines = []
-        for fields in common.read_fields(common.CLASSES_FILE, CLASS_FIELD_COUNT):
-            if fields[0] in plan["leave_classes"]:
-                remaining = []
-                for participant in fields[9].split(";"):
-                    if participant != member_id and participant != "":
-                        remaining.append(participant)
-                fields[9] = ";".join(remaining)
-            new_lines.append("|".join(fields))
-        common.rewrite_records(common.CLASSES_FILE, new_lines, readable_class_line)
+    # Four files are written one after another. If any write fails (e.g. a file open in another
+    # program), every file is put back as it was, so the data is never left half changed.
+    snapshot = common.snapshot_files((common.BILLS_FILE, common.BOOKINGS_FILE, common.CLASSES_FILE,
+                                      common.MEMBERS_FILE))
+    try:
+        if len(plan["void_ids"]) > 0:
+            new_lines = []
+            for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
+                if fields[0] in plan["void_ids"]:
+                    fields[8] = "VOID"
+                new_lines.append("|".join(fields))
+            common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
+        if len(plan["cancel_bookings"]) > 0:
+            new_lines = []
+            for fields in common.read_fields(common.BOOKINGS_FILE, BOOKING_FIELD_COUNT):
+                if fields[0] in plan["cancel_bookings"]:
+                    fields[7] = "CANCELLED"
+                new_lines.append("|".join(fields))
+            common.rewrite_records(common.BOOKINGS_FILE, new_lines, readable_booking_line)
+        if len(plan["leave_classes"]) > 0:
+            new_lines = []
+            for fields in common.read_fields(common.CLASSES_FILE, CLASS_FIELD_COUNT):
+                if fields[0] in plan["leave_classes"]:
+                    remaining = []
+                    for participant in fields[9].split(";"):
+                        if participant != member_id and participant != "":
+                            remaining.append(participant)
+                    fields[9] = ";".join(remaining)
+                new_lines.append("|".join(fields))
+            common.rewrite_records(common.CLASSES_FILE, new_lines, readable_class_line)
 
-    delete_member(member_id)   # the normal blockers are cleared now, so the normal rules pass
+        delete_member(member_id)   # the normal blockers are cleared now, so the normal rules pass
+    except (ValueError, OSError) as error:
+        not_restored = common.restore_files(snapshot)
+        if len(not_restored) == 0:
+            raise ValueError(f"Force delete stopped: {error} Nothing was changed: your records were put back "
+                             "as they were.")
+        raise ValueError(f"Force delete stopped: {error} These files could not be put back, please check "
+                         f"them: {', '.join(not_restored)}.")
     message = f"Member {member_id} deleted."
     if force_delete_text(plan) != "":
         message = message + "\nAlso done first:\n" + force_delete_text(plan)
@@ -714,9 +765,16 @@ def build_manage_members_page(page_frame, page_hooks):
                                      f"Expires {member.get_expiry_date()} ({member_status(member)})"))
 
     def save_action(member_id):
-        """Save the edited name, phone and type."""
+        """Save the edited name, phone and type. A changed type starts a new membership period."""
+        old_member = find_member_by_id(load_all_members(), member_id)
         update_member(member_id, fields["name"].get(), fields["phone"].get(), fields["type"].get())
-        return f"Member {member_id} saved."
+        new_member = find_member_by_id(load_all_members(), member_id)
+        message = f"Member {member_id} saved."
+        if old_member is not None and new_member is not None and old_member.get_membership_type() != new_member.get_membership_type():
+            message = (message + f"\nThe type changed from {old_member.get_membership_type()} to "
+                       f"{new_member.get_membership_type()}, so a new membership period starts today. "
+                       f"It now expires on {new_member.get_expiry_date()}.")
+        return message
 
     page_hooks["Manage Members"] = common.build_manage_page(
         page_frame, MEMBER_LIST_HEADER, member_rows, "member", build_form, clear_form, fill_form,

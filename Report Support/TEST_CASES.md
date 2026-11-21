@@ -419,6 +419,26 @@ The Home page was screenshotted in light and dark mode on this machine
 | DD-04 | Narrow window | Create Bill in a 900 px window | List inside the window | Exactly so | PASS |
 
 
+## Tester's review: dates, type change, started bookings, rollback, Register layout (Entry 34)
+
+| ID | Description | Input | Expected | Actual | Pass/Fail |
+|---|---|---|---|---|---|
+| RV-01 | Bad expiry date in members.txt | `2027-13-40` | Line hidden (kept in the file); Manage Members opens, summary, Book a Court and class drop-downs don't crash; member can't book | Exactly so (before the fix: Tk error and crash in Booking) | PASS |
+| RV-02 | Bad join date | `2026-13-40` | Same as RV-01 (before: loaded silently) | Exactly so | PASS |
+| RV-03 | Short dates | `2026-1-5` / `2027-1-5` | Loaded and tidied to `2026-01-05` / `2027-01-05`, also in the coaching readers | Exactly so | PASS |
+| RV-04 | Damaged line survives an update | update another member | The bad line is still in members.txt | Exactly so | PASS |
+| RV-05 | Type change starts a new period | MEM004 Pay-As-You-Go -> Monthly | Expiry = today + 30; same type leaves expiry alone | Exactly so | PASS |
+| RV-06 | Billing agrees after a type change | MEM003 Monthly (fee paid 5 days ago) -> Annual | Period starts today, old bill not counted, fee billable | Exactly so | PASS |
+| RV-07 | Save message (window) | MEM004 -> Annual, Save Changes | "Member MEM004 saved." plus "...a new membership period starts today. It now expires on <today+365>." | Exactly so | PASS |
+| RV-08 | Started booking blocks delete clearly | booking today at the current hour | "Cannot delete: booking BKG090 has already started today, so it is kept as a record. Try again tomorrow."; Force Delete plan agrees | Exactly so | PASS |
+| RV-09 | Later today / future unchanged | booking later today; MEM001 (+5 days) | Still "Cannot delete: member has an upcoming confirmed booking."; force plan cancels the later one | Exactly so | PASS |
+| RV-10 | Window: started booking | Delete beside the member | One question, then an error naming the booking and "Force delete is not possible" | Exactly so | PASS |
+| RV-11 | Rollback: a write fails halfway | simulated OSError on members.txt, classes.txt, bookings.txt | "Force delete stopped: ... Nothing was changed: your records were put back as they were."; EVERY file identical to before | Exactly so | PASS |
+| RV-12 | Rollback also fails | restore write fails for bills.txt | Message names the files that could not be put back | Exactly so | PASS |
+| RV-13 | Coach force delete rollback | simulated OSError on coaches.txt | Stopped; all files back as before | Exactly so | PASS |
+| RV-14 | Register layout | open Register | 7 cards, widest right edge 938 of 1000 px, Register button inside the window | Exactly so (item could not be reproduced: pictures are 216 px) | PASS |
+| RV-15 | Bigger replacement pictures | 232, 480 and 600 px wide | Shown at most 230 px wide; the current 216 px pictures are not shrunk | Exactly so | PASS |
+
 ## Force delete of members and coaches (Entry 33)
 
 | ID | Description | Input | Expected | Actual | Pass/Fail |

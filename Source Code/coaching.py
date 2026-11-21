@@ -708,8 +708,9 @@ def load_member_expiry_dates():
     expiry_dates = {}
     for line in common.read_lines(common.MEMBERS_FILE):
         fields = common.split_fields(line, MEMBER_FIELD_COUNT)
-        if fields is not None:
-            expiry_dates[fields[0]] = fields[5]
+        # A damaged join or expiry date leaves the member out; 2027-1-5 is tidied to 2027-01-05 (dates compare as text).
+        if fields is not None and common.is_valid_date(fields[4]) and common.is_valid_date(fields[5]):
+            expiry_dates[fields[0]] = common.normalize_date(fields[5])
     return expiry_dates
 
 
@@ -936,16 +937,26 @@ def force_delete_coach(coach_id):
     plan = force_delete_coach_plan(coach_id)
     if len(plan["stuck"]) > 0:
         raise ValueError("Force delete is not possible:\n- " + "\n- ".join(plan["stuck"]))
-    if len(plan["void_ids"]) > 0:
-        new_lines = []
-        for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
-            if fields[0] in plan["void_ids"]:
-                fields[8] = "VOID"
-            new_lines.append("|".join(fields))
-        common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
-    for class_id in plan["delete_ids"]:
-        cancel_class(class_id)   # the normal class delete: its bills are void now, so it is allowed
-    message = delete_coach(coach_id)
+    # Several files are written one after another; if any write fails, every file is put back.
+    snapshot = common.snapshot_files((common.BILLS_FILE, common.CLASSES_FILE, common.COACHES_FILE))
+    try:
+        if len(plan["void_ids"]) > 0:
+            new_lines = []
+            for fields in common.read_fields(common.BILLS_FILE, BILL_FIELD_COUNT):
+                if fields[0] in plan["void_ids"]:
+                    fields[8] = "VOID"
+                new_lines.append("|".join(fields))
+            common.rewrite_records(common.BILLS_FILE, new_lines, readable_bill_line)
+        for class_id in plan["delete_ids"]:
+            cancel_class(class_id)   # the normal class delete: its bills are void now, so it is allowed
+        message = delete_coach(coach_id)
+    except (ValueError, OSError) as error:
+        not_restored = common.restore_files(snapshot)
+        if len(not_restored) == 0:
+            raise ValueError(f"Force delete stopped: {error} Nothing was changed: your records were put back "
+                             "as they were.")
+        raise ValueError(f"Force delete stopped: {error} These files could not be put back, please check "
+                         f"them: {', '.join(not_restored)}.")
     if len(plan["delete_ids"]) > 0:
         message = message + "\nAlso done first:\n" + force_delete_coach_text(plan)
     return message

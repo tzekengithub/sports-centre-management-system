@@ -769,6 +769,13 @@ Checked by driving the buttons in a launched window.
 - **Safety:** the plan is worked out first without changing anything; if a PAID bill or a started booking is in the way, nothing is changed and the message names it.
 - **Verify:** FD-01..FD-14 in `TEST_CASES.md` (38 checks, including the real Delete buttons); all earlier suites pass.
 
+## Entry 34 - Tester's review: dates, type change, started bookings, rollback, layout
+- **Asked:** five items from a tester's code review (bad dates, type change vs billing, started-booking messages, no rollback in force delete, Register layout).
+- **Reproduced first** on a throw-away copy: item 1 was real and wider than reported (a bad expiry broke Manage Members AND Booking's member list; a bad join date was silently kept; short dates compared wrongly as text). Item 5 did NOT reproduce (the card pictures are 216 px; the 4th card ended at 938 of 1000 px), so only a safe size cap was added.
+- **Produced:** `line_to_member` and `Member` validate and tidy dates; `booking` / `coaching` `load_member_expiry_dates` skip damaged members; `update_member` + the save message start a new period on a type change; `started_booking_today` and a clearer Delete message; `common.snapshot_files` / `restore_files` with rollback in `force_delete_member` and `force_delete_coach`; card picture width 220 / max 230.
+- **Decisions:** type change recalculates the expiry from today (not blocked) so the demo step still works; a started booking still blocks Delete, with its own message.
+- **Verify:** RV-01..RV-15 in `TEST_CASES.md` (56 checks); all earlier suites pass (one zoom check was flaky on the first run and passed on the second).
+
 ## Honest limitations of this session
 - The GUI was only smoke-tested (launched without crashing); no button
   was interactively clicked by the AI. Each member must click-test their
